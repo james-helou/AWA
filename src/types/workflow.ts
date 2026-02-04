@@ -84,7 +84,9 @@ export interface WorkflowInput {
 
 export interface TemplateSelection {
   templateId: string;
+  customization?: string;
   customizations?: Record<string, string>;
+  modifiedWorkflow?: Omit<Workflow, 'id' | 'originalPrompt' | 'generatedAt'>;
 }
 
 export interface FormData {
