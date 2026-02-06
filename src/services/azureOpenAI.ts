@@ -99,7 +99,7 @@ const DATA_SOURCE_ICONS: Record<string, string> = {
   scraper: '🕷️'
 };
 
-export async function generateWorkflowWithAI(tasks: string): Promise<Workflow> {
+async function callAzureOpenAI(messages: { role: string; content: string }[]): Promise<string> {
   if (!AZURE_OPENAI_KEY || !AZURE_OPENAI_ENDPOINT || !AZURE_OPENAI_MODEL) {
     throw new Error('Azure OpenAI configuration is missing. Check your .env file.');
   }
@@ -113,10 +113,7 @@ export async function generateWorkflowWithAI(tasks: string): Promise<Workflow> {
       'api-key': AZURE_OPENAI_KEY,
     },
     body: JSON.stringify({
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `Analyze these tasks and design an optimal multi-agent workflow:\n\n${tasks}` }
-      ],
+      messages,
       max_completion_tokens: 16000
     }),
   });
@@ -144,8 +141,11 @@ export async function generateWorkflowWithAI(tasks: string): Promise<Workflow> {
   if (content.endsWith('```')) {
     content = content.slice(0, -3);
   }
-  content = content.trim();
+  
+  return content.trim();
+}
 
+function parseWorkflowResponse(content: string, originalTasks: string): Workflow {
   let llmResponse: LLMWorkflowResponse;
   try {
     llmResponse = JSON.parse(content);
@@ -204,7 +204,7 @@ export async function generateWorkflowWithAI(tasks: string): Promise<Workflow> {
     id: workflowId,
     name: llmResponse.name || 'Generated Workflow',
     description: llmResponse.description || '',
-    originalPrompt: tasks,
+    originalPrompt: originalTasks,
     generatedAt: new Date().toISOString(),
     agents,
     dataSources,
@@ -215,4 +215,62 @@ export async function generateWorkflowWithAI(tasks: string): Promise<Workflow> {
   };
 
   return workflow;
+}
+
+export async function generateWorkflowWithAI(tasks: string): Promise<Workflow> {
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: `Analyze these tasks and design an optimal multi-agent workflow:\n\n${tasks}` }
+  ];
+  
+  const content = await callAzureOpenAI(messages);
+  return parseWorkflowResponse(content, tasks);
+}
+
+export async function regenerateWorkflowWithFeedback(
+  tasks: string, 
+  currentWorkflow: Workflow, 
+  feedback: string
+): Promise<Workflow> {
+  // Build a summary of current agents for context
+  const currentAgentsSummary = currentWorkflow.agents
+    .map((a, i) => `${i + 1}. ${a.name}: ${a.description}`)
+    .join('\n');
+
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'user', content: `Analyze these tasks and design an optimal multi-agent workflow:\n\n${tasks}` },
+    { role: 'assistant', content: JSON.stringify({
+      name: currentWorkflow.name,
+      description: currentWorkflow.description,
+      estimatedBuildTime: currentWorkflow.estimatedBuildTime,
+      estimatedComplexity: currentWorkflow.estimatedComplexity,
+      agents: currentWorkflow.agents.map(a => ({
+        name: a.name,
+        description: a.description,
+        type: a.type,
+        color: a.color,
+        triggerType: a.trigger.type,
+        triggerDescription: a.trigger.description,
+        actions: a.actions,
+        integrations: a.integrations,
+        outputs: a.outputs
+      })),
+      dataSources: currentWorkflow.dataSources.map(ds => ({
+        name: ds.name,
+        type: ds.type,
+        description: ds.description
+      })),
+      humanTouchpoints: currentWorkflow.humanTouchpoints.map(ht => ({
+        name: ht.name,
+        type: ht.type,
+        description: ht.description,
+        required: ht.required
+      }))
+    }) },
+    { role: 'user', content: `The user has reviewed the agents and has this feedback:\n\n"${feedback}"\n\nPlease regenerate the workflow with these changes in mind. Keep the same JSON format.` }
+  ];
+  
+  const content = await callAzureOpenAI(messages);
+  return parseWorkflowResponse(content, tasks);
 }

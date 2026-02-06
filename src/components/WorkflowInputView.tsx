@@ -112,10 +112,10 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Paste Your Process Tasks</h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  Enter the list of tasks that your process or project requires. Our AI will analyze them and design 
-                  an optimal multi-agent workflow with the right agents, data sources, and human touchpoints.
+                  Describe your end-to-end process and the tasks needed to complete it. AI will help you build the right agents for the job.
                 </p>
-              </div>
+                </div>
+                {/* Removed duplicate instruction */}
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-# Corporate Actions Intelligence Platform
+# Agentc Workflow Architect
 
 This is a React TypeScript application built with Vite and Tailwind CSS.
 
