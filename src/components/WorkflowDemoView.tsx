@@ -159,303 +159,159 @@ interface AgentMockData {
 }
 
 // Generate realistic mock data entirely in TypeScript (no AI calls)
+// This builds everything directly from the agent's own actions, name, and integrations
+// so each agent's preview is unique and contextual.
 function generateRealisticMockData(
   agent: Agent,
-  columns: { key: string; label: string }[],
+  _columns: { key: string; label: string }[],
   workflowContext: string,
   stepIndex: number
 ): AgentMockData {
-  // Seed based on agent ID for deterministic row count
   resetSeed(agent.id, 0);
   const numRows = randBetween(5, 7);
-  const rows: MockRow[] = [];
-  
-  // Determine agent type from actions
-  const actions = agent.actions.join(' ').toLowerCase();
-  const isExtract = actions.includes('extract') || actions.includes('parse');
-  const isValidate = actions.includes('validate') || actions.includes('check') || actions.includes('verify');
-  const isApprove = actions.includes('approve') || actions.includes('review') || actions.includes('deny');
-  const isCategorize = actions.includes('categorize') || actions.includes('classify');
-  const isNotify = actions.includes('notify') || actions.includes('send') || actions.includes('route');
-  const isIntake = actions.includes('intake') || actions.includes('ingest') || actions.includes('receive');
-  const isRecord = actions.includes('record') || actions.includes('store') || actions.includes('save');
 
-  // Check if columns came from a domain profile (non-standard column keys)
-  const profile = detectDomainProfile(agent);
-  const profileColumnKeys = new Set(profile.columns.map(c => c.key));
-  const usingDomainProfile = columns.every(c => profileColumnKeys.has(c.key));
+  // ── Build columns directly from agent actions ──
+  // First column: contextual ID based on agent name
+  const agentWords = agent.name.replace(/agent/gi, '').trim().split(/\s+/);
+  const idPrefix = agentWords[0]?.substring(0, 3).toUpperCase() || 'ITM';
+  const idLabel = agentWords.length > 0 ? `${agentWords[0]} ID` : 'Item ID';
 
-  if (usingDomainProfile && profile.sampleValues) {
-    // ── Domain-aware row generation ──
-    for (let i = 0; i < numRows; i++) {
-      resetSeed(agent.id, i);
-      const row: MockRow = { id: profile.sampleIds[i % profile.sampleIds.length], item_id: profile.sampleIds[i % profile.sampleIds.length] };
-
-      columns.forEach(col => {
-        if (col.key === 'item_id' || col.key === 'id') return;
-        if (col.key === 'status') {
-          const r = seededRandom();
-          row[col.key] = r > 0.55 ? 'Complete' : r > 0.25 ? 'In Progress' : 'Pending';
-        } else if (profile.sampleValues[col.key]) {
-          row[col.key] = pickRandom(profile.sampleValues[col.key]);
-        }
-      });
-
-      // Status color
-      const st = String(row['status'] || '');
-      row['_statusColor'] = st === 'Complete' || st === 'Delivered' || st === 'Cleared' ? 'green'
-        : st === 'Pending' || st === 'In Review' ? 'amber'
-        : st === 'Failed' || st === 'Rejected' ? 'red'
-        : 'blue';
-
-      rows.push(row);
-    }
-
-    // Domain-aware activity feed
-    const times = ['2 min ago', '5 min ago', '12 min ago', '25 min ago', '1 hour ago'];
-    const activityFeed = profile.activityTemplates.slice(0, 5).map((tpl, i) => {
-      const row = rows[i % rows.length];
-      let msg = tpl;
-      Object.entries(row).forEach(([k, v]) => { msg = msg.replace(`{${k}}`, String(v)); });
-      msg = msg.replace('{id}', String(row.item_id || row.id));
-      return {
-        id: String(i),
-        type: i === 0 ? 'success' : i === 1 ? 'info' : i === 2 ? 'warning' : 'success',
-        message: msg,
-        time: times[i] || times[times.length - 1],
-        user: 'System',
-      };
-    });
-
-    return {
-      metrics: profile.metrics,
-      tableTitle: profile.screenTitle,
-      tableSubtitle: profile.screenSubtitle,
-      columns,
-      rows,
-      uiType: 'table',
-      activityFeed,
-      processingSteps: agent.actions.map((a, i) => ({
-        label: a,
-        detail: i < agent.actions.length - 1 ? 'Completed' : 'In progress...',
-        done: i < agent.actions.length - 1,
-      })),
-    };
-  }
-  
-  // Expanded sample data pools for more variety
-  const emails = [
-    'john.smith@acme.com', 'sarah.jones@vertex.com', 'michael.chen@pinnacle.com', 
-    'emma.wilson@atlas.io', 'david.kim@zenith.co', 'rachel.patel@quantum.ai', 
-    'james.garcia@horizon.net', 'lisa.nguyen@nexus.com', 'alex.martinez@summit.io',
-    'priya.sharma@catalyst.ai', 'omar.hassan@vanguard.com', 'zoe.anderson@stellar.net'
+  const columns: { key: string; label: string }[] = [
+    { key: 'item_id', label: idLabel },
   ];
-  const phones = [
-    '+1-555-0123', '(555) 234-5678', '+1-555-9012', '555-345-6789', 
-    '+1-555-7890', '(555) 456-7890', '+1-555-2468', '(555) 678-9012',
-    '+1-555-3456', '(555) 890-1234', '+1-555-5678', '(555) 123-4567'
-  ];
-  const addresses = [
-    '123 Main St, Boston MA 02101', '456 Oak Ave, Seattle WA 98101', 
-    '789 Pine Rd, Austin TX 73301', '321 Elm St, Denver CO 80201', 
-    '654 Maple Dr, Portland OR 97201', '987 Cedar Ln, Phoenix AZ 85001',
-    '246 Birch Way, Miami FL 33101', '135 Spruce Ct, Chicago IL 60601'
-  ];
-  const ages = ['18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30'];
-  const heights = ['5\'5"', '5\'6"', '5\'7"', '5\'8"', '5\'9"', '5\'10"', '5\'11"', '6\'0"', '6\'1"', '6\'2"'];
-  const weights = ['145 lbs', '155 lbs', '160 lbs', '165 lbs', '170 lbs', '175 lbs', '180 lbs', '185 lbs', '190 lbs'];
-  const fullNames = [
-    'Alex Johnson', 'Maya Patel', 'Carlos Rodriguez', 'Leila Hassan', 
-    'Marcus Chen', 'Zara Williams', 'Jamal Thompson', 'Sofia Kovac',
-    'Dmitri Volkov', 'Amira Said', 'Kenji Tanaka', 'Isabella Santos'
-  ];
-  const categories = ['Finance', 'HR', 'Operations', 'Sales', 'Support', 'Engineering', 'Marketing', 'Legal', 'Product'];
-  const reviewers = ['Emily Watson', 'Michael Chen', 'Sarah Lopez', 'David Kim', 'Rachel Adams', 'James Park', 'Lisa Zhang', 'Omar Johnson'];
-  const statuses = ['Complete', 'Active', 'Pending', 'In Review', 'Processing'];
-  const documents = [
-    'Application_001.pdf', 'Form_042.pdf', 'Submission_127.pdf', 
-    'Request_A55.pdf', 'File_098.pdf', 'Document_K12.pdf',
-    'Report_B23.pdf', 'Contract_C78.pdf', 'Agreement_D90.pdf'
-  ];
-  
-  for (let i = 0; i < numRows; i++) {
-    // Reset seed for deterministic data generation
-    resetSeed(agent.id, i);
-    
-    const row: MockRow = { id: randomId('ITEM', i + stepIndex * 100), item_id: randomId('ITEM', i + stepIndex * 100) };
-    
-    columns.forEach(col => {
-      if (col.key === 'item_id') return; // Already set
-      
-      // Fill in values based on column type
-      if (col.key === 'extracted_email') {
-        row[col.key] = pickRandom(emails);
-      } else if (col.key === 'extracted_phone') {
-        row[col.key] = pickRandom(phones);
-      } else if (col.key === 'extracted_address') {
-        row[col.key] = pickRandom(addresses);
-      } else if (col.key === 'extracted_age') {
-        row[col.key] = pickRandom(ages);
-      } else if (col.key === 'extracted_height') {
-        row[col.key] = pickRandom(heights);
-      } else if (col.key === 'extracted_weight') {
-        row[col.key] = pickRandom(weights);
-      } else if (col.key === 'extracted_name') {
-        row[col.key] = pickRandom(fullNames);
-      } else if (col.key === 'confidence') {
-        row[col.key] = randBetween(85, 99) + '%';
-      } else if (col.key === 'validation_status') {
-        row[col.key] = seededRandom() > 0.3 ? 'Valid' : 'Invalid';
-      } else if (col.key === 'errors_found') {
-        row[col.key] = row['validation_status'] === 'Valid' ? '0' : String(randBetween(1, 4));
-      } else if (col.key === 'category') {
-        row[col.key] = pickRandom(categories);
-      } else if (col.key === 'confidence_pct') {
-        row[col.key] = randBetween(78, 98) + '%';
-      } else if (col.key === 'decision') {
-        const rand = seededRandom();
-        row[col.key] = rand > 0.4 ? 'Approved' : rand > 0.2 ? 'Rejected' : 'Pending';
-      } else if (col.key === 'reviewer') {
-        row[col.key] = row['decision'] === 'Pending' ? '-' : pickRandom(reviewers);
-      } else if (col.key === 'reviewed_date') {
-        row[col.key] = row['decision'] === 'Pending' ? '-' : seededRandom() > 0.5 ? 'Feb 12, 2026' : 'Feb 11, 2026';
-      } else if (col.key === 'calculated_score') {
-        row[col.key] = (randBetween(50, 100) / 10).toFixed(1);
-      } else if (col.key === 'risk_level') {
-        const score = parseFloat(String(row['calculated_score'] || '5'));
-        row[col.key] = score > 7.5 ? 'Low' : score > 5 ? 'Medium' : 'High';
-      } else if (col.key === 'destination') {
-        row[col.key] = pickRandom(emails);
-      } else if (col.key === 'delivery_status') {
-        row[col.key] = pickRandom(['Sent', 'Delivered', 'Pending']);
-      } else if (col.key === 'sent_date') {
-        const hour = randBetween(9, 17);
-        const displayHour = hour > 12 ? hour - 12 : hour;
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const day = seededRandom() > 0.5 ? 'Feb 12' : 'Feb 11';
-        row[col.key] = `${day}, ${displayHour}:${String(randBetween(10, 59)).padStart(2, '0')} ${ampm}`;
-      } else if (col.key === 'applicant_name') {
-        row[col.key] = pickRandom(fullNames);
-      } else if (col.key === 'document') {
-        row[col.key] = pickRandom(documents);
-      } else if (col.key === 'submitted_by') {
-        row[col.key] = pickRandom(fullNames);
-      } else if (col.key === 'status') {
-        if (isApprove) {
-          row[col.key] = row['decision'] === 'Approved' ? 'Approved' : row['decision'] === 'Rejected' ? 'Declined' : 'Under Review';
-        } else if (isValidate) {
-          row[col.key] = row['validation_status'] === 'Valid' ? 'Validated' : 'Failed';
-        } else if (isNotify) {
-          row[col.key] = row['delivery_status'];
-        } else {
-          row[col.key] = pickRandom(statuses);
-        }
-      }
-    });
-    
-    // Add status color
-    if (row['status'] === 'Approved' || row['status'] === 'Validated' || row['status'] === 'Complete' || row['status'] === 'Delivered') {
-      row['_statusColor'] = 'green';
-    } else if (row['status'] === 'Declined' || row['status'] === 'Failed') {
-      row['_statusColor'] = 'red';
-    } else if (row['status'] === 'Pending' || row['status'] === 'Under Review') {
-      row['_statusColor'] = 'amber';
+
+  // Derive 3-4 middle columns from the agent's actions
+  // Take the first 3 unique "meaningful" actions and create columns for them
+  const actionColumns: { key: string; label: string; values: string[] }[] = [];
+
+  for (const action of agent.actions.slice(0, 4)) {
+    const lower = action.toLowerCase();
+
+    // Skip generic words, try to extract the meaningful noun/verb
+    if (lower.includes('reconcil') || lower.includes('match') || lower.includes('compare')) {
+      actionColumns.push({ key: 'match_result', label: 'Match Result', values: ['Matched', 'Partial Match', 'Unmatched', 'Auto-Reconciled', 'Exception'] });
+    } else if (lower.includes('update') && (lower.includes('system') || lower.includes('front office') || lower.includes('record'))) {
+      const system = lower.includes('front office') ? 'Front Office' : lower.includes('gl') ? 'GL' : lower.includes('book') ? 'Books & Records' : 'System';
+      actionColumns.push({ key: 'target_system', label: 'Target System', values: [system, 'PMS', 'OMS', 'Data Warehouse', 'Client Portal', 'Core Banking'] });
+      actionColumns.push({ key: 'update_status', label: 'Update Status', values: ['Synced', 'Pending Sync', 'Sync Error', 'Queued', 'Verified'] });
+    } else if (lower.includes('transfer') || lower.includes('move') || lower.includes('cash')) {
+      actionColumns.push({ key: 'amount', label: 'Amount', values: ['$1,250,000', '$842,750', '$3,100,000', '$475,320', '$2,680,000', '$156,800', '$5,420,100'] });
+      actionColumns.push({ key: 'destination', label: 'Destination', values: ['Pooled Bank Acct', 'Client Trust', 'Operating Account', 'Settlement Acct', 'Custodian', 'Wire Transfer'] });
+    } else if (lower.includes('setup') || lower.includes('open') || lower.includes('create')) {
+      const type = lower.includes('sub account') || lower.includes('sub-account') ? 'Sub-Account' :
+                   lower.includes('managed') ? 'Managed Account' :
+                   lower.includes('brokerage') ? 'Brokerage' :
+                   lower.includes('fiduciary') ? 'Fiduciary' : 'Account';
+      actionColumns.push({ key: 'account_type', label: 'Account Type', values: [type, 'Brokerage/Specialty', 'Specialty/Institutional', 'Managed Brokerage', 'Fiduciary Trust', 'Advisory'] });
+      actionColumns.push({ key: 'client_name', label: 'Client', values: firstNames.slice(0, 7).map((f, i) => `${f} ${lastNames[i]}`) });
+    } else if (lower.includes('advise') || lower.includes('notify') || lower.includes('inform') || lower.includes('alert')) {
+      actionColumns.push({ key: 'recipient', label: 'Recipient', values: firstNames.slice(0, 7).map((f, i) => `${f} ${lastNames[i]}`) });
+      actionColumns.push({ key: 'notification_type', label: 'Notification', values: ['Cash Available', 'Transfer Complete', 'Action Required', 'Approval Needed', 'Status Update', 'Confirmation'] });
+    } else if (lower.includes('implement') || lower.includes('execute') || lower.includes('proposal')) {
+      actionColumns.push({ key: 'proposal', label: 'Proposal/Order', values: ['Growth Rebalance', 'Income Allocation', 'Tax Harvest', 'New Investment', 'Sector Rotation', 'Risk Reduction'] });
+      actionColumns.push({ key: 'value', label: 'Value', values: ['$2.5M', '$1.8M', '$750K', '$3.2M', '$4.1M', '$920K', '$5.6M'] });
+    } else if (lower.includes('report') || lower.includes('perform') || lower.includes('generate')) {
+      actionColumns.push({ key: 'report_type', label: 'Report', values: ['Performance', 'Holdings', 'Cash Flow', 'Tax Summary', 'Fee Report', 'Risk Analysis', 'Compliance'] });
+      actionColumns.push({ key: 'period', label: 'Period', values: ['Jan 2026', 'Q4 2025', 'FY 2025', 'Feb 2026', 'YTD 2026', 'Monthly', 'Quarterly'] });
+    } else if (lower.includes('refer') || lower.includes('escalat') || lower.includes('missing')) {
+      actionColumns.push({ key: 'referred_to', label: 'Referred To', values: ['Front Office', 'Banker', 'Compliance', 'Operations Manager', 'Senior Advisor', 'Legal'] });
+      actionColumns.push({ key: 'reason', label: 'Reason', values: ['Missing Info', 'Needs Approval', 'Exception', 'Manual Review', 'Documentation Gap', 'Policy Check'] });
+    } else if (lower.includes('enter') || lower.includes('order') || lower.includes('trade')) {
+      actionColumns.push({ key: 'order_type', label: 'Order Type', values: ['Buy', 'Sell', 'Rebalance', 'Transfer In', 'Transfer Out', 'Exchange'] });
+      actionColumns.push({ key: 'security', label: 'Security', values: ['AAPL', 'MSFT', 'GOOGL', 'US Treasury 10Y', 'SPY ETF', 'BND ETF', 'VTI ETF'] });
+      actionColumns.push({ key: 'quantity', label: 'Quantity', values: ['500 shares', '1,200 shares', '300 units', '750 shares', '$2M par', '2,500 shares', '800 shares'] });
+    } else if (lower.includes('validate') || lower.includes('verify') || lower.includes('check')) {
+      actionColumns.push({ key: 'check_result', label: 'Result', values: ['Passed', 'Failed', 'Warning', 'Passed', 'Passed', 'Needs Review'] });
+      actionColumns.push({ key: 'details', label: 'Details', values: ['All fields valid', '2 discrepancies', 'Amount mismatch', 'Clean', 'Verified', 'Missing signature'] });
     } else {
-      row['_statusColor'] = 'blue';
+      // For any other action, create a column showing the action as a task
+      const shortLabel = action.length > 25 ? action.substring(0, 22) + '...' : action;
+      const key = `action_${actionColumns.length}`;
+      if (!actionColumns.some(c => c.key === key)) {
+        actionColumns.push({ key, label: shortLabel, values: ['Complete', 'In Progress', 'Pending', 'Complete', 'Complete', 'Queued'] });
+      }
     }
-    
+  }
+
+  // Deduplicate columns by key and take up to 4
+  const seenKeys = new Set(['item_id', 'status']);
+  const uniqueActionCols = actionColumns.filter(c => {
+    if (seenKeys.has(c.key)) return false;
+    seenKeys.add(c.key);
+    return true;
+  }).slice(0, 4);
+
+  columns.push(...uniqueActionCols.map(c => ({ key: c.key, label: c.label })));
+
+  // Add integrations as a column if present
+  if (agent.integrations.length > 0 && columns.length < 6) {
+    columns.push({ key: 'system', label: 'System', });
+  }
+
+  columns.push({ key: 'status', label: 'Status' });
+
+  // ── Generate rows ──
+  const rows: MockRow[] = [];
+  const statusOptions = ['Complete', 'In Progress', 'Pending', 'Complete', 'Complete', 'Processing', 'Complete'];
+
+  for (let i = 0; i < numRows; i++) {
+    resetSeed(agent.id, i);
+    const row: MockRow = {
+      id: `${idPrefix}-${String(i + 1).padStart(3, '0')}`,
+      item_id: `${idPrefix}-${String(i + 1).padStart(3, '0')}`,
+    };
+
+    // Fill action-derived columns
+    uniqueActionCols.forEach(col => {
+      row[col.key] = pickRandom(col.values);
+    });
+
+    // Fill integration column
+    if (agent.integrations.length > 0 && columns.some(c => c.key === 'system')) {
+      row['system'] = pickRandom(agent.integrations);
+    }
+
+    // Status
+    row['status'] = pickRandom(statusOptions);
+    row['_statusColor'] = row['status'] === 'Complete' ? 'green'
+      : row['status'] === 'Pending' ? 'amber'
+      : row['status'] === 'Processing' || row['status'] === 'In Progress' ? 'blue'
+      : 'green';
+
     rows.push(row);
   }
-  
-  // Generate screen title based on agent type
-  let screenTitle = 'Dashboard';
-  let screenSubtitle = agent.description;
-  
-  if (isIntake) {
-    screenTitle = 'Intake Dashboard';
-    screenSubtitle = 'Incoming applications and submissions';
-  } else if (isExtract) {
-    screenTitle = 'Data Extraction Results';
-    screenSubtitle = 'Extracted information from submitted forms';
-  } else if (isValidate) {
-    screenTitle = 'Validation Dashboard';
-    screenSubtitle = 'Data quality and validation results';
-  } else if (isApprove) {
-    screenTitle = 'Approval Decisions';
-    screenSubtitle = 'Review and approval status';
-  } else if (isCategorize) {
-    screenTitle = 'Categorization Results';
-    screenSubtitle = 'Automated classification and routing';
-  } else if (isNotify) {
-    screenTitle = 'Notification Status';
-    screenSubtitle = 'Delivery confirmation and tracking';
-  } else if (isRecord) {
-    screenTitle = 'Records Database';
-    screenSubtitle = 'Stored and archived records';
+
+  // ── Screen title from agent name ──
+  const screenTitle = `${agent.name} Dashboard`;
+  const screenSubtitle = agent.description;
+
+  // ── Metrics derived from agent context ──
+  const completedCount = rows.filter(r => r['status'] === 'Complete').length;
+  const pendingCount = rows.filter(r => r['status'] === 'Pending').length;
+  const inProgressCount = rows.length - completedCount - pendingCount;
+
+  const metrics = [
+    { label: `Total ${agentWords[0] || 'Items'}`, value: String(rows.length * randBetween(3, 8)), subtext: 'today', color: 'blue' },
+    { label: 'Completed', value: String(completedCount * randBetween(2, 5)), subtext: `${Math.round((completedCount / rows.length) * 100)}% success`, color: 'green' },
+    { label: 'In Progress', value: String(inProgressCount + randBetween(1, 3)), subtext: 'active now', color: 'amber' },
+  ];
+  if (pendingCount > 0) {
+    metrics.push({ label: 'Pending Review', value: String(pendingCount + randBetween(0, 2)), subtext: 'needs attention', color: 'red' });
   }
-  
-  // Generate metrics based on agent type
-  const metrics: { label: string; value: string; subtext: string; color: string }[] = [];
-  
-  if (isExtract) {
-    metrics.push({ label: 'Items Extracted', value: String(rows.length * randBetween(3, 5)), subtext: 'from documents', color: 'blue' });
-    metrics.push({ label: 'Success Rate', value: randBetween(92, 99) + '%', subtext: 'accuracy', color: 'green' });
-  } else if (isValidate) {
-    const passed = rows.filter(r => r['validation_status'] === 'Valid').length;
-    metrics.push({ label: 'Items Validated', value: String(rows.length), subtext: 'total checks', color: 'blue' });
-    metrics.push({ label: 'Passed', value: String(passed), subtext: Math.round((passed / rows.length) * 100) + '% pass rate', color: 'green' });
-    metrics.push({ label: 'Failed', value: String(rows.length - passed), subtext: 'with errors', color: 'red' });
-  } else if (isApprove) {
-    const approved = rows.filter(r => r['decision'] === 'Approved').length;
-    const rejected = rows.filter(r => r['decision'] === 'Rejected').length;
-    const pending = rows.filter(r => r['decision'] === 'Pending').length;
-    metrics.push({ label: 'Approved', value: String(approved), subtext: 'this week', color: 'green' });
-    metrics.push({ label: 'Rejected', value: String(rejected), subtext: 'with feedback', color: 'red' });
-    if (pending > 0) metrics.push({ label: 'Pending', value: String(pending), subtext: 'awaiting review', color: 'amber' });
-  } else if (isCategorize) {
-    metrics.push({ label: 'Items Categorized', value: String(rows.length * randBetween(4, 6)), subtext: 'auto-classified', color: 'blue' });
-    metrics.push({ label: 'High Confidence', value: String(rows.length - 1), subtext: 'above 90%', color: 'green' });
-  } else if (isNotify) {
-    const delivered = rows.filter(r => r['delivery_status'] === 'Delivered').length;
-    metrics.push({ label: 'Notifications Sent', value: String(rows.length), subtext: 'total messages', color: 'blue' });
-    metrics.push({ label: 'Delivered', value: String(delivered), subtext: 'confirmed', color: 'green' });
-  } else {
-    metrics.push({ label: 'Total Items', value: String(rows.length), subtext: 'processed', color: 'blue' });
-    metrics.push({ label: 'Completed', value: randBetween(85, 99) + '%', subtext: 'success rate', color: 'green' });
-  }
-  
-  // Generate activity feed
-  const activityFeed: Array<{ id: string; type: string; message: string; time: string; user?: string }> = [];
+
+  // ── Activity feed from agent actions ──
   const times = ['2 min ago', '5 min ago', '12 min ago', '25 min ago', '1 hour ago'];
-  
-  for (let i = 0; i < Math.min(5, rows.length); i++) {
-    const row = rows[i];
-    let message = '';
-    
-    if (isExtract) {
-      const field = row['extracted_email'] || row['extracted_name'] || row['extracted_phone'];
-      message = `Extracted ${columns.find(c => c.key !== 'item_id' && c.key !== 'status')?.label.toLowerCase()} from ${row['document'] || row['item_id']}: ${field}`;
-    } else if (isValidate) {
-      message = `Validated ${row['item_id']}: ${row['validation_status']} - ${row['errors_found']} errors found`;
-    } else if (isApprove) {
-      message = `${row['reviewer']} ${String(row['decision'] || '').toLowerCase()} ${row['item_id']}${row['decision'] === 'Rejected' ? ' - Missing requirements' : ' - All criteria met'}`;
-    } else if (isCategorize) {
-      message = `Categorized ${row['item_id']} as ${row['category']} with ${row['confidence_pct']} confidence`;
-    } else if (isNotify) {
-      message = `Notification sent to ${row['destination']}: ${row['delivery_status']}`;
-    } else {
-      message = `Processed ${row['item_id']} - Status: ${row['status']}`;
-    }
-    
-    activityFeed.push({
+  const activityFeed = agent.actions.slice(0, 5).map((action, i) => {
+    const row = rows[i % rows.length];
+    return {
       id: String(i),
-      type: row['_statusColor'] === 'green' ? 'success' : row['_statusColor'] === 'red' ? 'warning' : 'info',
-      message,
+      type: i === 0 ? 'success' as string : i === 2 ? 'warning' as string : 'info' as string,
+      message: `${action} — ${row.item_id} (${row.status})`,
       time: times[i] || times[times.length - 1],
-      user: isApprove && row['reviewer'] !== '-' ? String(row['reviewer']) : 'System'
-    });
-  }
-  
+      user: pickRandom([...firstNames.slice(0, 5)]) + ' ' + pickRandom([...lastNames.slice(0, 5)]),
+    };
+  });
+
   return {
     metrics,
     tableTitle: screenTitle,
