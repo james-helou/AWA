@@ -766,6 +766,12 @@ function AgentDashboard({
   const [mockData, setMockData] = useState<AgentMockData | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [approvalStates, setApprovalStates] = useState<Record<string, 'approved' | 'declined' | null>>({});
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
+  };
 
   // Check if this agent requires human approval
   const requiresApproval = useMemo(() => {
@@ -1198,7 +1204,10 @@ function AgentDashboard({
           <Send className="w-5 h-5" />
           <span>Send Reminders</span>
         </button>
-        <button className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 flex items-center space-x-2 transition">
+        <button
+          onClick={() => showToast('Export is available when agents are live.')}
+          className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 flex items-center space-x-2 transition"
+        >
           <Download className="w-5 h-5" />
           <span>Export</span>
         </button>
@@ -1331,7 +1340,7 @@ function AgentDashboard({
                 Cancel
               </button>
               <button
-                onClick={() => { setShowAddModal(false); }}
+                onClick={() => { setShowAddModal(false); showToast('Entry added (demo only).'); }}
                 className={`px-4 py-2 text-white rounded-lg text-sm font-medium transition ${color.bg} hover:opacity-90`}
               >
                 Add Entry
@@ -1382,7 +1391,7 @@ function AgentDashboard({
             </div>
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex space-x-2">
               <button
-                onClick={() => { setShowReminderModal(false); }}
+                onClick={() => { setShowReminderModal(false); showToast('Reminders sent (demo only).'); }}
                 className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2 transition"
               >
                 <Send className="w-4 h-4" />
@@ -1392,6 +1401,14 @@ function AgentDashboard({
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-fadeIn">
+          <div className="bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg flex items-center space-x-2">
+            <span>{toastMessage}</span>
           </div>
         </div>
       )}
