@@ -9,7 +9,7 @@ interface WorkflowDemoViewProps {
   onBack: () => void;
 }
 
-// â”€â”€â”€ Icon Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Icon Components ────────────────────────────────────────────────────────
 type IconProps = { className?: string };
 
 const Activity = ({ className }: IconProps) => (
@@ -99,7 +99,7 @@ const ChevronLeft = ({ className }: IconProps) => (
   </svg>
 );
 
-// â”€â”€â”€ Color Map â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Color Map ──────────────────────────────────────────────────────────────
 const agentColors: Record<string, {
   bg: string; text: string; light: string; border: string;
   gradientFrom: string; gradientTo: string;
@@ -118,7 +118,7 @@ function getColor(c: string) {
   return agentColors[c] || agentColors.blue;
 }
 
-// â”€â”€â”€ Mock Data Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Mock Data Types ────────────────────────────────────────────────────────
 
 interface MockRow { id: string; [key: string]: string | number; }
 
@@ -134,7 +134,7 @@ interface AgentMockData {
   error?: string;
 }
 
-// Generate mock data for an agent via LLM â€” no hardcoded fallback
+// Generate mock data for an agent via LLM — no hardcoded fallback
 async function generateAgentMockDataAsync(
   agent: Agent,
   workflowContext: string,
@@ -146,7 +146,7 @@ async function generateAgentMockDataAsync(
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      console.log(`ðŸ¤– LLM call attempt ${attempt + 1}/${maxRetries} for step ${stepIndex + 1}/${totalSteps}: ${agent.name}`);
+      console.log(`🤖 LLM call attempt ${attempt + 1}/${maxRetries} for step ${stepIndex + 1}/${totalSteps}: ${agent.name}`);
 
       const aiData = await generateAgentDashboardMockData(
         agent, workflowContext, stepIndex, totalSteps
@@ -171,17 +171,17 @@ async function generateAgentMockDataAsync(
         })),
       };
 
-      console.log(`âœ… LLM generated ${result.rows.length} rows for "${result.tableTitle}"`);
+      console.log(`✅ LLM generated ${result.rows.length} rows for "${result.tableTitle}"`);
       return result;
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
-      console.warn(`âš ï¸ Attempt ${attempt + 1} failed for "${agent.name}":`, lastError.message);
+      console.warn(`⚠️ Attempt ${attempt + 1} failed for "${agent.name}":`, lastError.message);
       if (attempt < maxRetries - 1) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
     }
   }
 
   // Return error state instead of hardcoded data
-  console.error(`âŒ All ${maxRetries} LLM attempts failed for "${agent.name}"`);
+  console.error(`❌ All ${maxRetries} LLM attempts failed for "${agent.name}"`);
   return {
     metrics: [],
     tableTitle: `${agent.name} Dashboard`,
@@ -198,8 +198,7 @@ async function generateAgentMockDataAsync(
     error: `Failed to generate data: ${lastError?.message || 'Unknown error'}`,
   };
 }
-
-// â”€â”€â”€ Status Badge Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Status Badge Helper ────────────────────────────────────────────────────
 function StatusBadge({ status, color }: { status: string; color: string }) {
   const map: Record<string, string> = {
     green: 'bg-green-100 text-green-800',
@@ -215,7 +214,7 @@ function StatusBadge({ status, color }: { status: string; color: string }) {
   );
 }
 
-// â”€â”€â”€ Agent Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Agent Dashboard ────────────────────────────────────────────────────────
 function AgentDashboard({ 
   agent, 
   index, 
@@ -257,11 +256,11 @@ function AgentDashboard({
   // Receive pre-fetched LLM data from parent (all calls are made in WorkflowDemoView)
   useEffect(() => {
     if (previousAgentData) {
-      console.log(`ðŸ“¦ Using LLM-generated data for step ${index + 1}: ${agent.name}`);
+      console.log(`📦 Using LLM-generated data for step ${index + 1}: ${agent.name}`);
       setMockData(previousAgentData);
       setIsLoadingData(false);
     } else {
-      // Parent hasn't finished the LLM call yet â€“ show loading
+      // Parent hasn't finished the LLM call yet – show loading
       setIsLoadingData(true);
       setMockData(null);
     }
@@ -333,6 +332,22 @@ function AgentDashboard({
 
   return (
     <div className="space-y-6 animate-fadeIn">
+      {/* Error Banner */}
+      {mockData.error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <div className="bg-red-100 p-2 rounded-lg">
+              <Shield className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-red-900 mb-1">Data generation failed</h4>
+              <p className="text-sm text-red-800">{mockData.error}</p>
+              <p className="text-xs text-red-600 mt-1">Check that the Azure OpenAI environment variables are configured correctly.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* What This Step Does - Simple Explanation */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
@@ -378,9 +393,9 @@ function AgentDashboard({
             </div>
             <p className="text-3xl font-bold text-gray-900">{metric.value}</p>
             <p className={`text-xs mt-1 ${
-              metric.subtext.includes('â†‘') || metric.subtext.includes('+')
-                ? 'text-green-600' : metric.subtext.includes('â†“') && metric.subtext.includes('faster')
-                ? 'text-green-600' : metric.subtext.includes('â†“')
+              metric.subtext.includes('↑') || metric.subtext.includes('+')
+                ? 'text-green-600' : metric.subtext.includes('↓') && metric.subtext.includes('faster')
+                ? 'text-green-600' : metric.subtext.includes('↓')
                 ? 'text-red-600' : 'text-gray-500'
             }`}>{metric.subtext}</p>
           </div>
@@ -400,7 +415,7 @@ function AgentDashboard({
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              ðŸ“‹ {mockData.tableTitle}
+              📋 {mockData.tableTitle}
             </button>
             <button
               onClick={() => setActiveTab('activity')}
@@ -410,7 +425,7 @@ function AgentDashboard({
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              ðŸ• Activity Feed
+              🕐 Activity Feed
             </button>
           </div>
         </div>
@@ -436,7 +451,7 @@ function AgentDashboard({
                       statusFilter === 'green' ? 'bg-green-600 text-white ring-2 ring-green-300' : 'bg-green-100 text-green-800 hover:bg-green-200'
                     }`}
                   >
-                    âœ“ Completed ({statusCounts.green})
+                    ✓ Completed ({statusCounts.green})
                   </button>
                 )}
                 {statusCounts.amber && statusCounts.amber > 0 && (
@@ -446,7 +461,7 @@ function AgentDashboard({
                       statusFilter === 'amber' ? 'bg-amber-600 text-white ring-2 ring-amber-300' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
                     }`}
                   >
-                    â³ Pending ({statusCounts.amber})
+                    ⏳ Pending ({statusCounts.amber})
                   </button>
                 )}
                 {statusCounts.red && statusCounts.red > 0 && (
@@ -456,7 +471,7 @@ function AgentDashboard({
                       statusFilter === 'red' ? 'bg-red-600 text-white ring-2 ring-red-300' : 'bg-red-100 text-red-800 hover:bg-red-200'
                     }`}
                   >
-                    âš  Critical ({statusCounts.red})
+                    ⚠ Critical ({statusCounts.red})
                   </button>
                 )}
                 {statusCounts.blue && statusCounts.blue > 0 && (
@@ -466,7 +481,7 @@ function AgentDashboard({
                       statusFilter === 'blue' ? 'bg-blue-600 text-white ring-2 ring-blue-300' : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
                     }`}
                   >
-                    ðŸ†• New ({statusCounts.blue})
+                    🆕 New ({statusCounts.blue})
                   </button>
                 )}
                 {statusFilter && (
@@ -586,7 +601,7 @@ function AgentDashboard({
                             className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1 transition"
                           >
                             <Eye className="w-4 h-4" />
-                            <span>View Details â†’</span>
+                            <span>View Details →</span>
                           </button>
                         )}
                       </td>
@@ -707,7 +722,7 @@ function AgentDashboard({
             <h4 className="text-sm font-bold text-gray-900">Performance</h4>
             <TrendingUp className="w-5 h-5 text-green-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">24%</p>
+          <p className="text-3xl font-bold text-gray-900">↑ 24%</p>
           <p className="text-xs text-gray-500 mt-1">Improvement vs last period</p>
         </div>
       </div>
@@ -879,7 +894,7 @@ function AgentDashboard({
   );
 }
 
-// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main Component ─────────────────────────────────────────────────────────
 
 
 export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDemoViewProps) {
@@ -889,7 +904,7 @@ export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDe
 
   // When the workflow changes: clear cache and kick off ALL LLM calls in parallel
   useEffect(() => {
-    console.log('ðŸ”„ New workflow detected - generating mock data for all agents in parallel');
+    console.log('🔄 New workflow detected - generating mock data for all agents in parallel');
     setAgentDataCache(new Map());
     setActiveAgentIndex(0);
 
@@ -900,17 +915,17 @@ export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDe
       generateAgentMockDataAsync(agent, originalTasks, idx, workflow.agents.length)
         .then(data => {
           if (!cancelled) {
-            console.log(`ðŸ’¾ Pre-fetched data for step ${idx + 1}: ${agent.name}`);
+            console.log(`💾 Pre-fetched data for step ${idx + 1}: ${agent.name}`);
             setAgentDataCache(prev => new Map(prev).set(agent.id, data));
           }
         })
         .catch(err => {
-          console.error(`âŒ Pre-fetch failed for step ${idx + 1} (${agent.name}):`, err);
+          console.error(`❌ Pre-fetch failed for step ${idx + 1} (${agent.name}):`, err);
         })
     );
 
     Promise.allSettled(promises).then(() => {
-      if (!cancelled) console.log('âœ… All agent data pre-fetched');
+      if (!cancelled) console.log('✅ All agent data pre-fetched');
     });
 
     return () => { cancelled = true; };
@@ -937,7 +952,7 @@ export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDe
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Agentic Workflow Architect</h1>
-                <p className="text-sm text-gray-500">{workflow.agents.length}-Step Workflow â€¢ Live Preview</p>
+                <p className="text-sm text-gray-500">{workflow.agents.length}-Step Workflow • Live Preview</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
