@@ -1,4 +1,4 @@
-# Agentc Workflow Architect
+# Agentic Workflow Architect
 
 This is a React TypeScript application built with Vite and Tailwind CSS.
 

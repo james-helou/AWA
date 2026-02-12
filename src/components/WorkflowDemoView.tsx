@@ -1272,7 +1272,7 @@ export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDe
                 <Activity className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Agentc Workflow Architect</h1>
+                <h1 className="text-xl font-bold text-gray-900">Agentic Workflow Architect</h1>
                 <p className="text-sm text-gray-500">{workflow.agents.length}-Step Workflow • Live Preview</p>
               </div>
             </div>
