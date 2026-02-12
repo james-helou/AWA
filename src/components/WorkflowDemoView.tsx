@@ -9,7 +9,7 @@ interface WorkflowDemoViewProps {
   onBack: () => void;
 }
 
-// ─── Icon Components ────────────────────────────────────────────────────────
+// â”€â”€â”€ Icon Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type IconProps = { className?: string };
 
 const Activity = ({ className }: IconProps) => (
@@ -99,7 +99,7 @@ const ChevronLeft = ({ className }: IconProps) => (
   </svg>
 );
 
-// ─── Color Map ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Color Map â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const agentColors: Record<string, {
   bg: string; text: string; light: string; border: string;
   gradientFrom: string; gradientTo: string;
@@ -118,32 +118,7 @@ function getColor(c: string) {
   return agentColors[c] || agentColors.blue;
 }
 
-// ─── Mock Data Helpers ──────────────────────────────────────────────────────
-const firstNames = ['Sarah', 'Mike', 'Emily', 'James', 'Lisa', 'David', 'Rachel', 'Tom', 'Anna', 'Chris', 'Maria', 'John', 'Jessica', 'Robert', 'Michelle', 'Carlos', 'Amanda', 'Kevin', 'Nicole', 'Brandon', 'Stephanie', 'Ryan', 'Jennifer', 'Daniel', 'Laura', 'Andrew', 'Samantha', 'Eric', 'Ashley', 'Jason'];
-const lastNames = ['Chen', 'Rodriguez', 'Watson', 'Park', 'Thompson', 'Kim', 'Adams', 'Martinez', 'Petrov', "O'Brien", 'Singh', 'Johnson', 'Williams', 'Lee', 'Garcia', 'Patel', 'Taylor', 'Anderson', 'Wilson', 'Moore', 'Jackson', 'White', 'Harris', 'Martin', 'Thompson', 'Lopez', 'Gonzalez', 'Clark', 'Lewis', 'Walker'];
-const companyNames = ['Acme Corp', 'Vertex Industries', 'Pinnacle Group', 'Horizon Ltd', 'Atlas Partners', 'Summit Holdings', 'Nexus Systems', 'Catalyst Inc', 'Zenith Co', 'Quantum Tech', 'Phoenix Solutions', 'Titan Enterprises', 'Stellar Corp', 'Vanguard Inc', 'Meridian Group'];
-const departments = ['Operations', 'Finance', 'Engineering', 'Marketing', 'Sales', 'HR', 'Legal', 'Compliance', 'Product', 'Support'];
-
-// Seeded random for deterministic data generation
-let seed = 12345;
-function seededRandom() {
-  seed = (seed * 9301 + 49297) % 233280;
-  return seed / 233280;
-}
-function resetSeed(agentId: string, rowIndex: number) {
-  // Create deterministic seed from agent ID and row index
-  let hash = 0;
-  for (let i = 0; i < agentId.length; i++) {
-    hash = ((hash << 5) - hash) + agentId.charCodeAt(i);
-    hash = hash & hash;
-  }
-  seed = Math.abs(hash + rowIndex * 1000);
-}
-
-function pickRandom<T>(arr: T[]): T { return arr[Math.floor(seededRandom() * arr.length)]; }
-function randBetween(a: number, b: number) { return Math.floor(seededRandom() * (b - a + 1)) + a; }
-function randomId(prefix: string, i: number) { return `${prefix}-${String(i + 1).padStart(3, '0')}`; }
-function generateRandomName() { return `${pickRandom(firstNames)} ${pickRandom(lastNames)}`; }
+// â”€â”€â”€ Mock Data Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface MockRow { id: string; [key: string]: string | number; }
 
@@ -156,580 +131,75 @@ interface AgentMockData {
   processingSteps: { label: string; detail: string; done: boolean }[];
   uiType?: string;
   activityFeed?: Array<{ id: string; type: string; message: string; time: string; user?: string; metadata?: any }>;
+  error?: string;
 }
 
-// Generate realistic mock data entirely in TypeScript (no AI calls)
-// This builds everything directly from the agent's own actions, name, and integrations
-// so each agent's preview is unique and contextual.
-function generateRealisticMockData(
-  agent: Agent,
-  _columns: { key: string; label: string }[],
-  workflowContext: string,
-  stepIndex: number
-): AgentMockData {
-  resetSeed(agent.id, 0);
-  const numRows = randBetween(5, 7);
-
-  // ── Build columns directly from agent actions ──
-  // First column: contextual ID based on agent name
-  const agentWords = agent.name.replace(/agent/gi, '').trim().split(/\s+/);
-  const idPrefix = agentWords[0]?.substring(0, 3).toUpperCase() || 'ITM';
-  const idLabel = agentWords.length > 0 ? `${agentWords[0]} ID` : 'Item ID';
-
-  const columns: { key: string; label: string }[] = [
-    { key: 'item_id', label: idLabel },
-  ];
-
-  // Derive 3-4 middle columns from the agent's actions
-  // Take the first 3 unique "meaningful" actions and create columns for them
-  const actionColumns: { key: string; label: string; values: string[] }[] = [];
-
-  for (const action of agent.actions.slice(0, 4)) {
-    const lower = action.toLowerCase();
-
-    // Skip generic words, try to extract the meaningful noun/verb
-    if (lower.includes('reconcil') || lower.includes('match') || lower.includes('compare')) {
-      actionColumns.push({ key: 'match_result', label: 'Match Result', values: ['Matched', 'Partial Match', 'Unmatched', 'Auto-Reconciled', 'Exception'] });
-    } else if (lower.includes('update') && (lower.includes('system') || lower.includes('front office') || lower.includes('record'))) {
-      const system = lower.includes('front office') ? 'Front Office' : lower.includes('gl') ? 'GL' : lower.includes('book') ? 'Books & Records' : 'System';
-      actionColumns.push({ key: 'target_system', label: 'Target System', values: [system, 'PMS', 'OMS', 'Data Warehouse', 'Client Portal', 'Core Banking'] });
-      actionColumns.push({ key: 'update_status', label: 'Update Status', values: ['Synced', 'Pending Sync', 'Sync Error', 'Queued', 'Verified'] });
-    } else if (lower.includes('transfer') || lower.includes('move') || lower.includes('cash')) {
-      actionColumns.push({ key: 'amount', label: 'Amount', values: ['$1,250,000', '$842,750', '$3,100,000', '$475,320', '$2,680,000', '$156,800', '$5,420,100'] });
-      actionColumns.push({ key: 'destination', label: 'Destination', values: ['Pooled Bank Acct', 'Client Trust', 'Operating Account', 'Settlement Acct', 'Custodian', 'Wire Transfer'] });
-    } else if (lower.includes('setup') || lower.includes('open') || lower.includes('create')) {
-      const type = lower.includes('sub account') || lower.includes('sub-account') ? 'Sub-Account' :
-                   lower.includes('managed') ? 'Managed Account' :
-                   lower.includes('brokerage') ? 'Brokerage' :
-                   lower.includes('fiduciary') ? 'Fiduciary' : 'Account';
-      actionColumns.push({ key: 'account_type', label: 'Account Type', values: [type, 'Brokerage/Specialty', 'Specialty/Institutional', 'Managed Brokerage', 'Fiduciary Trust', 'Advisory'] });
-      actionColumns.push({ key: 'client_name', label: 'Client', values: firstNames.slice(0, 7).map((f, i) => `${f} ${lastNames[i]}`) });
-    } else if (lower.includes('advise') || lower.includes('notify') || lower.includes('inform') || lower.includes('alert')) {
-      actionColumns.push({ key: 'recipient', label: 'Recipient', values: firstNames.slice(0, 7).map((f, i) => `${f} ${lastNames[i]}`) });
-      actionColumns.push({ key: 'notification_type', label: 'Notification', values: ['Cash Available', 'Transfer Complete', 'Action Required', 'Approval Needed', 'Status Update', 'Confirmation'] });
-    } else if (lower.includes('implement') || lower.includes('execute') || lower.includes('proposal')) {
-      actionColumns.push({ key: 'proposal', label: 'Proposal/Order', values: ['Growth Rebalance', 'Income Allocation', 'Tax Harvest', 'New Investment', 'Sector Rotation', 'Risk Reduction'] });
-      actionColumns.push({ key: 'value', label: 'Value', values: ['$2.5M', '$1.8M', '$750K', '$3.2M', '$4.1M', '$920K', '$5.6M'] });
-    } else if (lower.includes('report') || lower.includes('perform') || lower.includes('generate')) {
-      actionColumns.push({ key: 'report_type', label: 'Report', values: ['Performance', 'Holdings', 'Cash Flow', 'Tax Summary', 'Fee Report', 'Risk Analysis', 'Compliance'] });
-      actionColumns.push({ key: 'period', label: 'Period', values: ['Jan 2026', 'Q4 2025', 'FY 2025', 'Feb 2026', 'YTD 2026', 'Monthly', 'Quarterly'] });
-    } else if (lower.includes('refer') || lower.includes('escalat') || lower.includes('missing')) {
-      actionColumns.push({ key: 'referred_to', label: 'Referred To', values: ['Front Office', 'Banker', 'Compliance', 'Operations Manager', 'Senior Advisor', 'Legal'] });
-      actionColumns.push({ key: 'reason', label: 'Reason', values: ['Missing Info', 'Needs Approval', 'Exception', 'Manual Review', 'Documentation Gap', 'Policy Check'] });
-    } else if (lower.includes('enter') || lower.includes('order') || lower.includes('trade')) {
-      actionColumns.push({ key: 'order_type', label: 'Order Type', values: ['Buy', 'Sell', 'Rebalance', 'Transfer In', 'Transfer Out', 'Exchange'] });
-      actionColumns.push({ key: 'security', label: 'Security', values: ['AAPL', 'MSFT', 'GOOGL', 'US Treasury 10Y', 'SPY ETF', 'BND ETF', 'VTI ETF'] });
-      actionColumns.push({ key: 'quantity', label: 'Quantity', values: ['500 shares', '1,200 shares', '300 units', '750 shares', '$2M par', '2,500 shares', '800 shares'] });
-    } else if (lower.includes('validate') || lower.includes('verify') || lower.includes('check')) {
-      actionColumns.push({ key: 'check_result', label: 'Result', values: ['Passed', 'Failed', 'Warning', 'Passed', 'Passed', 'Needs Review'] });
-      actionColumns.push({ key: 'details', label: 'Details', values: ['All fields valid', '2 discrepancies', 'Amount mismatch', 'Clean', 'Verified', 'Missing signature'] });
-    } else {
-      // For any other action, create a column showing the action as a task
-      const shortLabel = action.length > 25 ? action.substring(0, 22) + '...' : action;
-      const key = `action_${actionColumns.length}`;
-      if (!actionColumns.some(c => c.key === key)) {
-        actionColumns.push({ key, label: shortLabel, values: ['Complete', 'In Progress', 'Pending', 'Complete', 'Complete', 'Queued'] });
-      }
-    }
-  }
-
-  // Deduplicate columns by key and take up to 4
-  const seenKeys = new Set(['item_id', 'status']);
-  const uniqueActionCols = actionColumns.filter(c => {
-    if (seenKeys.has(c.key)) return false;
-    seenKeys.add(c.key);
-    return true;
-  }).slice(0, 4);
-
-  columns.push(...uniqueActionCols.map(c => ({ key: c.key, label: c.label })));
-
-  // Add integrations as a column if present
-  if (agent.integrations.length > 0 && columns.length < 6) {
-    columns.push({ key: 'system', label: 'System', });
-  }
-
-  columns.push({ key: 'status', label: 'Status' });
-
-  // ── Generate rows ──
-  const rows: MockRow[] = [];
-  const statusOptions = ['Complete', 'In Progress', 'Pending', 'Complete', 'Complete', 'Processing', 'Complete'];
-
-  for (let i = 0; i < numRows; i++) {
-    resetSeed(agent.id, i);
-    const row: MockRow = {
-      id: `${idPrefix}-${String(i + 1).padStart(3, '0')}`,
-      item_id: `${idPrefix}-${String(i + 1).padStart(3, '0')}`,
-    };
-
-    // Fill action-derived columns
-    uniqueActionCols.forEach(col => {
-      row[col.key] = pickRandom(col.values);
-    });
-
-    // Fill integration column
-    if (agent.integrations.length > 0 && columns.some(c => c.key === 'system')) {
-      row['system'] = pickRandom(agent.integrations);
-    }
-
-    // Status
-    row['status'] = pickRandom(statusOptions);
-    row['_statusColor'] = row['status'] === 'Complete' ? 'green'
-      : row['status'] === 'Pending' ? 'amber'
-      : row['status'] === 'Processing' || row['status'] === 'In Progress' ? 'blue'
-      : 'green';
-
-    rows.push(row);
-  }
-
-  // ── Screen title from agent name ──
-  const screenTitle = `${agent.name} Dashboard`;
-  const screenSubtitle = agent.description;
-
-  // ── Metrics derived from agent context ──
-  const completedCount = rows.filter(r => r['status'] === 'Complete').length;
-  const pendingCount = rows.filter(r => r['status'] === 'Pending').length;
-  const inProgressCount = rows.length - completedCount - pendingCount;
-
-  const metrics = [
-    { label: `Total ${agentWords[0] || 'Items'}`, value: String(rows.length * randBetween(3, 8)), subtext: 'today', color: 'blue' },
-    { label: 'Completed', value: String(completedCount * randBetween(2, 5)), subtext: `${Math.round((completedCount / rows.length) * 100)}% success`, color: 'green' },
-    { label: 'In Progress', value: String(inProgressCount + randBetween(1, 3)), subtext: 'active now', color: 'amber' },
-  ];
-  if (pendingCount > 0) {
-    metrics.push({ label: 'Pending Review', value: String(pendingCount + randBetween(0, 2)), subtext: 'needs attention', color: 'red' });
-  }
-
-  // ── Activity feed from agent actions ──
-  const times = ['2 min ago', '5 min ago', '12 min ago', '25 min ago', '1 hour ago'];
-  const activityFeed = agent.actions.slice(0, 5).map((action, i) => {
-    const row = rows[i % rows.length];
-    return {
-      id: String(i),
-      type: i === 0 ? 'success' as string : i === 2 ? 'warning' as string : 'info' as string,
-      message: `${action} — ${row.item_id} (${row.status})`,
-      time: times[i] || times[times.length - 1],
-      user: pickRandom([...firstNames.slice(0, 5)]) + ' ' + pickRandom([...lastNames.slice(0, 5)]),
-    };
-  });
-
-  return {
-    metrics,
-    tableTitle: screenTitle,
-    tableSubtitle: screenSubtitle,
-    columns,
-    rows,
-    uiType: 'table',
-    activityFeed,
-    processingSteps: agent.actions.map((a, i) => ({
-      label: a,
-      detail: i < agent.actions.length - 1 ? 'Completed' : 'In progress...',
-      done: i < agent.actions.length - 1,
-    })),
-  };
-}
-
-// ─── Domain detection for context-aware fallback ─────────────────────────
-
-type DomainProfile = {
-  domain: string;
-  idLabel: string;
-  columns: { key: string; label: string }[];
-  sampleIds: string[];
-  sampleValues: Record<string, string[]>;
-  metrics: { label: string; value: string; subtext: string; color: string }[];
-  activityTemplates: string[];
-  screenTitle: string;
-  screenSubtitle: string;
-};
-
-const DOMAIN_PROFILES: DomainProfile[] = [
-  {
-    domain: 'finance',
-    idLabel: 'Transaction ID',
-    columns: [
-      { key: 'item_id', label: 'Transaction ID' },
-      { key: 'account', label: 'Account' },
-      { key: 'amount', label: 'Amount' },
-      { key: 'counterparty', label: 'Counterparty' },
-      { key: 'date', label: 'Date' },
-      { key: 'status', label: 'Status' },
-    ],
-    sampleIds: ['TXN-001', 'TXN-002', 'TXN-003', 'TXN-004', 'TXN-005', 'TXN-006', 'TXN-007'],
-    sampleValues: {
-      account: ['GL-1001 Operating', 'GL-2040 Payables', 'GL-3010 Revenue', 'GL-1500 Cash Pool', 'GL-4020 Securities', 'GL-2060 Liabilities', 'GL-5010 Equity'],
-      amount: ['$1,250,000.00', '$842,750.50', '$3,100,000.00', '$475,320.75', '$2,680,000.00', '$156,800.25', '$5,420,100.00'],
-      counterparty: ['Goldman Sachs', 'JP Morgan', 'State Street', 'BNY Mellon', 'Northern Trust', 'Charles Schwab', 'Fidelity'],
-      date: ['Feb 12, 2026', 'Feb 11, 2026', 'Feb 10, 2026', 'Feb 09, 2026', 'Feb 08, 2026', 'Feb 07, 2026', 'Feb 12, 2026'],
-    },
-    metrics: [
-      { label: 'Total Volume', value: '$14.2M', subtext: 'today', color: 'blue' },
-      { label: 'Reconciled', value: '94%', subtext: 'matched', color: 'green' },
-      { label: 'Exceptions', value: '12', subtext: 'pending review', color: 'amber' },
-      { label: 'Failed', value: '3', subtext: 'unmatched', color: 'red' },
-    ],
-    activityTemplates: [
-      'Reconciled {id} — {account} matched with {counterparty}',
-      'Exception flagged on {id}: amount mismatch of {amount}',
-      'Auto-matched {id} to {counterparty} ledger entry',
-      'Cash transfer {id} confirmed for {amount}',
-      'GL posting completed for {id} — {account}',
-    ],
-    screenTitle: 'Financial Operations Dashboard',
-    screenSubtitle: 'Real-time transaction processing and reconciliation',
-  },
-  {
-    domain: 'investment',
-    idLabel: 'Order ID',
-    columns: [
-      { key: 'item_id', label: 'Order ID' },
-      { key: 'client', label: 'Client' },
-      { key: 'asset_class', label: 'Asset Class' },
-      { key: 'amount', label: 'Amount' },
-      { key: 'portfolio', label: 'Portfolio' },
-      { key: 'status', label: 'Status' },
-    ],
-    sampleIds: ['ORD-001', 'ORD-002', 'ORD-003', 'ORD-004', 'ORD-005', 'ORD-006', 'ORD-007'],
-    sampleValues: {
-      client: ['Hargrove Family Trust', 'Meridian Pension Fund', 'Atlas Foundation', 'Chen Family Office', 'Vanguard Endowment', 'Sterling Partners', 'Pacific Holdings'],
-      asset_class: ['US Equities', 'Fixed Income', 'Real Estate', 'Private Equity', 'Commodities', 'Int\'l Equities', 'Alternatives'],
-      amount: ['$2,500,000', '$5,100,000', '$750,000', '$3,200,000', '$1,800,000', '$4,600,000', '$920,000'],
-      portfolio: ['Growth Aggressive', 'Conservative Income', 'Balanced Moderate', 'Tax-Efficient', 'ESG Focus', 'High Yield', 'Capital Preservation'],
-    },
-    metrics: [
-      { label: 'AUM Managed', value: '$2.4B', subtext: 'total', color: 'blue' },
-      { label: 'Orders Executed', value: '47', subtext: 'today', color: 'green' },
-      { label: 'Pending Allocation', value: '8', subtext: 'awaiting', color: 'amber' },
-      { label: 'Proposals', value: '12', subtext: 'in review', color: 'purple' },
-    ],
-    activityTemplates: [
-      'Investment proposal for {client} approved — {asset_class} allocation',
-      'Order {id} executed: {amount} into {portfolio}',
-      'Rebalance triggered for {client} — {asset_class} drift detected',
-      'Cash available for {client}: {amount} ready for deployment',
-      'Portfolio review completed for {client} — {portfolio}',
-    ],
-    screenTitle: 'Investment Management Dashboard',
-    screenSubtitle: 'Portfolio allocation, orders, and client management',
-  },
-  {
-    domain: 'account',
-    idLabel: 'Account ID',
-    columns: [
-      { key: 'item_id', label: 'Account ID' },
-      { key: 'client_name', label: 'Client Name' },
-      { key: 'account_type', label: 'Account Type' },
-      { key: 'custodian', label: 'Custodian' },
-      { key: 'opened_date', label: 'Opened' },
-      { key: 'status', label: 'Status' },
-    ],
-    sampleIds: ['ACCT-001', 'ACCT-002', 'ACCT-003', 'ACCT-004', 'ACCT-005', 'ACCT-006', 'ACCT-007'],
-    sampleValues: {
-      client_name: ['William Hargrove', 'Sophia Chen', 'Marcus Williams', 'Elena Petrov', 'James O\'Brien', 'Amira Hassan', 'Carlos Mendez'],
-      account_type: ['Managed Brokerage', 'Sub-Account Fiduciary', 'Specialty/Institutional', 'Brokerage/Specialty', 'Trust Account', 'Retirement IRA', 'Advisory Account'],
-      custodian: ['Schwab', 'Fidelity', 'Pershing', 'TD Ameritrade', 'BNY Mellon', 'State Street', 'Northern Trust'],
-      opened_date: ['Feb 12, 2026', 'Feb 11, 2026', 'Feb 10, 2026', 'Feb 08, 2026', 'Feb 07, 2026', 'Feb 05, 2026', 'Feb 03, 2026'],
-    },
-    metrics: [
-      { label: 'Accounts Opened', value: '23', subtext: 'this week', color: 'blue' },
-      { label: 'Setup Complete', value: '18', subtext: '78% done', color: 'green' },
-      { label: 'Pending Info', value: '5', subtext: 'missing docs', color: 'amber' },
-      { label: 'Escalated', value: '2', subtext: 'to front office', color: 'red' },
-    ],
-    activityTemplates: [
-      'Account {id} opened for {client_name} — {account_type}',
-      'Setup complete: {id} at {custodian} for {client_name}',
-      'Pending documentation for {id} — referred to front office',
-      'Sub-account created: {account_type} under {client_name}',
-      'Custodian transfer initiated for {id} to {custodian}',
-    ],
-    screenTitle: 'Account Setup Dashboard',
-    screenSubtitle: 'New account onboarding and configuration',
-  },
-  {
-    domain: 'compliance',
-    idLabel: 'Case ID',
-    columns: [
-      { key: 'item_id', label: 'Case ID' },
-      { key: 'entity', label: 'Entity' },
-      { key: 'check_type', label: 'Check Type' },
-      { key: 'risk_score', label: 'Risk Score' },
-      { key: 'assigned_to', label: 'Assigned To' },
-      { key: 'status', label: 'Status' },
-    ],
-    sampleIds: ['CMP-001', 'CMP-002', 'CMP-003', 'CMP-004', 'CMP-005', 'CMP-006', 'CMP-007'],
-    sampleValues: {
-      entity: ['Acme Holdings', 'Vertex Capital', 'Pinnacle Trust', 'Horizon Fund', 'Atlas Insurance', 'Summit Partners', 'Zenith Corp'],
-      check_type: ['KYC Review', 'AML Screening', 'Sanctions Check', 'Regulatory Filing', 'Risk Assessment', 'Audit Trail', 'Policy Review'],
-      risk_score: ['Low (12)', 'Medium (45)', 'Low (8)', 'High (78)', 'Medium (52)', 'Low (15)', 'High (85)'],
-      assigned_to: ['Emily Watson', 'Michael Chen', 'Sarah Lopez', 'David Kim', 'Rachel Adams', 'James Park', 'Lisa Zhang'],
-    },
-    metrics: [
-      { label: 'Cases Open', value: '34', subtext: 'active', color: 'blue' },
-      { label: 'Cleared', value: '28', subtext: 'this week', color: 'green' },
-      { label: 'High Risk', value: '4', subtext: 'escalated', color: 'red' },
-      { label: 'Pending Review', value: '6', subtext: 'in queue', color: 'amber' },
-    ],
-    activityTemplates: [
-      'KYC review completed for {entity} — risk score: {risk_score}',
-      'AML screening cleared: {id} — {entity}',
-      'High-risk alert on {id}: {entity} flagged for {check_type}',
-      'Case {id} assigned to {assigned_to} for {check_type}',
-      'Regulatory filing submitted for {entity} — auto-verified',
-    ],
-    screenTitle: 'Compliance & Risk Dashboard',
-    screenSubtitle: 'Regulatory checks, screening, and case management',
-  },
-  {
-    domain: 'reporting',
-    idLabel: 'Report ID',
-    columns: [
-      { key: 'item_id', label: 'Report ID' },
-      { key: 'report_name', label: 'Report Name' },
-      { key: 'client', label: 'Client' },
-      { key: 'period', label: 'Period' },
-      { key: 'delivered_via', label: 'Delivered Via' },
-      { key: 'status', label: 'Status' },
-    ],
-    sampleIds: ['RPT-001', 'RPT-002', 'RPT-003', 'RPT-004', 'RPT-005', 'RPT-006', 'RPT-007'],
-    sampleValues: {
-      report_name: ['Monthly Performance', 'Quarterly Holdings', 'Tax Lot Report', 'Fee Summary', 'Risk Analysis', 'Cash Flow Statement', 'Gain/Loss Report'],
-      client: ['Hargrove Trust', 'Chen Family Office', 'Meridian Pension', 'Atlas Foundation', 'Sterling Partners', 'Pacific Holdings', 'Vanguard Endowment'],
-      period: ['Jan 2026', 'Q4 2025', 'FY 2025', 'Jan 2026', 'Q4 2025', 'Feb 2026', 'Jan 2026'],
-      delivered_via: ['Client Portal', 'Email', 'SFTP', 'Client Portal', 'PDF/Email', 'API', 'Client Portal'],
-    },
-    metrics: [
-      { label: 'Reports Generated', value: '156', subtext: 'this month', color: 'blue' },
-      { label: 'Delivered', value: '142', subtext: '91% on time', color: 'green' },
-      { label: 'In Progress', value: '9', subtext: 'generating', color: 'amber' },
-      { label: 'Exceptions', value: '5', subtext: 'data issues', color: 'red' },
-    ],
-    activityTemplates: [
-      'Report {id} generated: {report_name} for {client}',
-      'Delivered {report_name} to {client} via {delivered_via}',
-      'Data exception in {id} — {report_name} for {client}',
-      'Quarterly report batch started: {period}',
-      'Client {client} accessed {report_name} on portal',
-    ],
-    screenTitle: 'Client Reporting Dashboard',
-    screenSubtitle: 'Report generation, delivery, and tracking',
-  },
-  {
-    domain: 'operations',
-    idLabel: 'Task ID',
-    columns: [
-      { key: 'item_id', label: 'Task ID' },
-      { key: 'task_name', label: 'Task' },
-      { key: 'assigned_to', label: 'Assigned To' },
-      { key: 'priority', label: 'Priority' },
-      { key: 'due_date', label: 'Due Date' },
-      { key: 'status', label: 'Status' },
-    ],
-    sampleIds: ['TSK-001', 'TSK-002', 'TSK-003', 'TSK-004', 'TSK-005', 'TSK-006', 'TSK-007'],
-    sampleValues: {
-      task_name: ['Update front office system', 'Process cash transfer', 'Reconcile GL entries', 'File regulatory report', 'Review exception queue', 'Update client records', 'Execute trade orders'],
-      assigned_to: ['Emily Watson', 'Michael Chen', 'Sarah Lopez', 'David Kim', 'Rachel Adams', 'James Park', 'Lisa Zhang'],
-      priority: ['High', 'Medium', 'High', 'Low', 'Medium', 'High', 'Medium'],
-      due_date: ['Feb 12, 2026', 'Feb 12, 2026', 'Feb 13, 2026', 'Feb 14, 2026', 'Feb 12, 2026', 'Feb 13, 2026', 'Feb 12, 2026'],
-    },
-    metrics: [
-      { label: 'Tasks Today', value: '42', subtext: 'total queue', color: 'blue' },
-      { label: 'Completed', value: '35', subtext: '83% done', color: 'green' },
-      { label: 'In Progress', value: '5', subtext: 'active', color: 'amber' },
-      { label: 'Blocked', value: '2', subtext: 'needs attention', color: 'red' },
-    ],
-    activityTemplates: [
-      'Task {id} completed: {task_name} by {assigned_to}',
-      'New task assigned: {task_name} to {assigned_to} — {priority} priority',
-      'Task {id} escalated: {task_name} — overdue',
-      'Batch of {task_name} tasks processed automatically',
-      'SLA met for {id}: {task_name} completed on time',
-    ],
-    screenTitle: 'Operations Dashboard',
-    screenSubtitle: 'Task management, processing, and workflow status',
-  },
-];
-
-/** Keywords that map to each domain */
-const DOMAIN_KEYWORDS: Record<string, string[]> = {
-  finance: ['reconcil', 'ledger', 'gl', 'general ledger', 'books and records', 'journal', 'posting', 'cash', 'transfer', 'bank', 'treasury', 'payment', 'settlement', 'clearing', 'pooled'],
-  investment: ['invest', 'portfolio', 'proposal', 'allocation', 'rebalanc', 'equity', 'fixed income', 'securities', 'asset', 'fund', 'aum', 'order', 'trade', 'execute order', 'brokerage'],
-  account: ['account', 'setup', 'sub account', 'sub-account', 'onboard', 'fiduciary', 'custod', 'managed account', 'open account', 'new account'],
-  compliance: ['compliance', 'regulat', 'kyc', 'aml', 'sanctions', 'risk', 'audit', 'policy', 'screening'],
-  reporting: ['report', 'performance', 'statement', 'client report', 'quarterly', 'tax lot', 'fee summary', 'deliver'],
-  operations: ['front office', 'back office', 'process', 'workflow', 'operations', 'system update', 'servicer', 'advise client', 'refer back'],
-};
-
-/**
- * Detect the best-matching domain profile from agent context.
- * Scores each domain by keyword hits across the agent name, description, actions, and integrations.
- */
-function detectDomainProfile(agent: Agent): DomainProfile {
-  const blob = [
-    agent.name,
-    agent.description,
-    ...agent.actions,
-    ...agent.integrations,
-    ...(agent.outputs || []).map(o => o.name),
-  ].join(' ').toLowerCase();
-
-  let bestDomain = 'operations'; // default
-  let bestScore = 0;
-
-  for (const [domain, keywords] of Object.entries(DOMAIN_KEYWORDS)) {
-    let score = 0;
-    for (const kw of keywords) {
-      if (blob.includes(kw)) score++;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      bestDomain = domain;
-    }
-  }
-
-  return DOMAIN_PROFILES.find(p => p.domain === bestDomain) || DOMAIN_PROFILES[DOMAIN_PROFILES.length - 1];
-}
-
-// Determine columns based on agent tasks
-function determineColumnsFromTasks(actions: string[], agent?: Agent): { key: string; label: string }[] {
-  const columns: { key: string; label: string }[] = [];
-  
-  // Always include item identifier as first column
-  columns.push({ key: 'item_id', label: 'Item ID' });
-  
-  // Analyze each action and add appropriate columns
-  let matchedSpecific = false;
-  actions.forEach(action => {
-    const a = action.toLowerCase();
-    
-    if (a.includes('extract') || a.includes('parse')) {
-      matchedSpecific = true;
-      if (a.includes('email')) columns.push({ key: 'extracted_email', label: 'Extracted Email' });
-      if (a.includes('phone')) columns.push({ key: 'extracted_phone', label: 'Extracted Phone' });
-      if (a.includes('address')) columns.push({ key: 'extracted_address', label: 'Extracted Address' });
-      if (a.includes('age')) columns.push({ key: 'extracted_age', label: 'Age' });
-      if (a.includes('height')) columns.push({ key: 'extracted_height', label: 'Height' });
-      if (a.includes('weight')) columns.push({ key: 'extracted_weight', label: 'Weight' });
-      if (a.includes('name') && !a.includes('rename')) columns.push({ key: 'extracted_name', label: 'Name' });
-      if (!columns.some(c => c.key === 'confidence')) {
-        columns.push({ key: 'confidence', label: 'Confidence' });
-      }
-    } else if (a.includes('validate') || a.includes('check') || a.includes('verify') || a.includes('enrich')) {
-      matchedSpecific = true;
-      columns.push({ key: 'validation_status', label: 'Validation Status' });
-      columns.push({ key: 'errors_found', label: 'Errors Found' });
-    } else if (a.includes('categorize') || a.includes('classify')) {
-      matchedSpecific = true;
-      columns.push({ key: 'category', label: 'Category' });
-      columns.push({ key: 'confidence_pct', label: 'Confidence %' });
-    } else if (a.includes('approve') || a.includes('review') || a.includes('decision') || a.includes('deny')) {
-      matchedSpecific = true;
-      columns.push({ key: 'decision', label: 'Decision' });
-      columns.push({ key: 'reviewer', label: 'Reviewer' });
-      columns.push({ key: 'reviewed_date', label: 'Review Date' });
-    } else if (a.includes('calculate') || a.includes('score')) {
-      matchedSpecific = true;
-      columns.push({ key: 'calculated_score', label: 'Score' });
-      columns.push({ key: 'risk_level', label: 'Risk Level' });
-    } else if (a.includes('route') || a.includes('send') || a.includes('forward') || a.includes('notify')) {
-      matchedSpecific = true;
-      columns.push({ key: 'destination', label: 'Sent To' });
-      columns.push({ key: 'delivery_status', label: 'Delivery Status' });
-      columns.push({ key: 'sent_date', label: 'Sent Date' });
-    } else if (a.includes('intake') || a.includes('ingest') || a.includes('receive') || a.includes('normalize')) {
-      matchedSpecific = true;
-      columns.push({ key: 'applicant_name', label: 'Applicant Name' });
-      columns.push({ key: 'submitted_by', label: 'Submitted By' });
-      columns.push({ key: 'document', label: 'Document' });
-    }
-  });
-  
-  // If no specific keyword matched, use domain profile columns
-  if (!matchedSpecific && agent) {
-    const profile = detectDomainProfile(agent);
-    return profile.columns;
-  }
-  
-  if (!columns.some(c => c.key === 'status')) {
-    columns.push({ key: 'status', label: 'Status' });
-  }
-  
-  const uniqueColumns = columns.filter((col, index, self) =>
-    index === self.findIndex(c => c.key === col.key)
-  );
-  
-  return uniqueColumns;
-}
-
-// Generate mock data for an agent – tries LLM first, falls back to deterministic
+// Generate mock data for an agent via LLM â€” no hardcoded fallback
 async function generateAgentMockDataAsync(
   agent: Agent,
   workflowContext: string,
   stepIndex: number,
   totalSteps: number,
-  previousAgent?: Agent,
-  previousAgentData?: AgentMockData
 ): Promise<AgentMockData> {
-  // ── Try LLM-based generation first ──
-  try {
-    console.log(`🤖 Calling LLM for step ${stepIndex + 1}/${totalSteps}: ${agent.name}`);
+  const maxRetries = 3;
+  let lastError: Error | null = null;
 
-    const aiData = await generateAgentDashboardMockData(
-      agent, workflowContext, stepIndex, totalSteps
-    );
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      console.log(`ðŸ¤– LLM call attempt ${attempt + 1}/${maxRetries} for step ${stepIndex + 1}/${totalSteps}: ${agent.name}`);
 
-    const result: AgentMockData = {
-      metrics: aiData.metrics || [],
-      tableTitle: aiData.tableTitle || `${agent.name} Dashboard`,
-      tableSubtitle: aiData.tableSubtitle || agent.description,
-      columns: aiData.columns || [{ key: 'id', label: 'ID' }, { key: 'status', label: 'Status' }],
-      rows: (aiData.rows || []).map((row: any, i: number) => ({
-        ...row,
-        id: row.id || `ITEM-${String(i + 1).padStart(3, '0')}`,
-        _statusColor: row._statusColor || 'blue',
-      })),
-      uiType: aiData.uiType || 'table',
-      activityFeed: aiData.activityFeed || [],
-      processingSteps: agent.actions.map((a, i) => ({
-        label: a,
-        detail: i < agent.actions.length - 1 ? 'Completed' : 'In progress...',
-        done: i < agent.actions.length - 1,
-      })),
-    };
+      const aiData = await generateAgentDashboardMockData(
+        agent, workflowContext, stepIndex, totalSteps
+      );
 
-    console.log(`✅ LLM generated ${result.rows.length} rows for "${result.tableTitle}"`);
-    return result;
-  } catch (llmError) {
-    console.warn('⚠️ LLM mock-data failed, falling back to deterministic:', llmError);
+      const result: AgentMockData = {
+        metrics: aiData.metrics || [],
+        tableTitle: aiData.tableTitle || `${agent.name} Dashboard`,
+        tableSubtitle: aiData.tableSubtitle || agent.description,
+        columns: aiData.columns || [{ key: 'id', label: 'ID' }, { key: 'status', label: 'Status' }],
+        rows: (aiData.rows || []).map((row: any, i: number) => ({
+          ...row,
+          id: row.id || `ITEM-${String(i + 1).padStart(3, '0')}`,
+          _statusColor: row._statusColor || 'blue',
+        })),
+        uiType: aiData.uiType || 'table',
+        activityFeed: aiData.activityFeed || [],
+        processingSteps: agent.actions.map((a, i) => ({
+          label: a,
+          detail: i < agent.actions.length - 1 ? 'Completed' : 'In progress...',
+          done: i < agent.actions.length - 1,
+        })),
+      };
+
+      console.log(`âœ… LLM generated ${result.rows.length} rows for "${result.tableTitle}"`);
+      return result;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.warn(`âš ï¸ Attempt ${attempt + 1} failed for "${agent.name}":`, lastError.message);
+      if (attempt < maxRetries - 1) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+    }
   }
 
-  // ── Deterministic fallback ──
-  try {
-    console.log(`🎯 Deterministic fallback for step ${stepIndex + 1}/${totalSteps}: ${agent.name}`);
-    const columns = determineColumnsFromTasks(agent.actions, agent);
-    const result = generateRealisticMockData(agent, columns, workflowContext, stepIndex);
-    console.log(`   ✅ Generated ${result.rows.length} rows for "${result.tableTitle}"`);
-    return result;
-  } catch (error) {
-    console.error('Failed to generate mock data:', error);
-    
-    //Fallback data
-    return {
-      metrics: [
-        { label: 'Total Items', value: '120', subtext: 'processed', color: 'blue' },
-        { label: 'Completed', value: '95%', subtext: 'success rate', color: 'green' },
-      ],
-      tableTitle: 'Dashboard',
-      tableSubtitle: agent.description,
-      columns: [{ key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'status', label: 'Status' }],
-      rows: [{ id: '001', name: generateRandomName(), status: 'Active', _statusColor: 'green' }],
-      uiType: 'table',
-      activityFeed: [],
-      processingSteps: agent.actions.map((a, i) => ({ label: a, detail: i < agent.actions.length - 1 ? 'Done' : 'Processing...', done: i < agent.actions.length - 1 })),
-    };
-  }
+  // Return error state instead of hardcoded data
+  console.error(`âŒ All ${maxRetries} LLM attempts failed for "${agent.name}"`);
+  return {
+    metrics: [],
+    tableTitle: `${agent.name} Dashboard`,
+    tableSubtitle: agent.description,
+    columns: [],
+    rows: [],
+    uiType: 'table',
+    activityFeed: [],
+    processingSteps: agent.actions.map((a) => ({
+      label: a,
+      detail: 'Waiting...',
+      done: false,
+    })),
+    error: `Failed to generate data: ${lastError?.message || 'Unknown error'}`,
+  };
 }
 
-// ─── Status Badge Helper ────────────────────────────────────────────────────
+// â”€â”€â”€ Status Badge Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StatusBadge({ status, color }: { status: string; color: string }) {
   const map: Record<string, string> = {
     green: 'bg-green-100 text-green-800',
@@ -745,7 +215,7 @@ function StatusBadge({ status, color }: { status: string; color: string }) {
   );
 }
 
-// ─── Agent Dashboard ────────────────────────────────────────────────────────
+// â”€â”€â”€ Agent Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AgentDashboard({ 
   agent, 
   index, 
@@ -787,11 +257,11 @@ function AgentDashboard({
   // Receive pre-fetched LLM data from parent (all calls are made in WorkflowDemoView)
   useEffect(() => {
     if (previousAgentData) {
-      console.log(`📦 Using LLM-generated data for step ${index + 1}: ${agent.name}`);
+      console.log(`ðŸ“¦ Using LLM-generated data for step ${index + 1}: ${agent.name}`);
       setMockData(previousAgentData);
       setIsLoadingData(false);
     } else {
-      // Parent hasn't finished the LLM call yet – show loading
+      // Parent hasn't finished the LLM call yet â€“ show loading
       setIsLoadingData(true);
       setMockData(null);
     }
@@ -908,9 +378,9 @@ function AgentDashboard({
             </div>
             <p className="text-3xl font-bold text-gray-900">{metric.value}</p>
             <p className={`text-xs mt-1 ${
-              metric.subtext.includes('↑') || metric.subtext.includes('+')
-                ? 'text-green-600' : metric.subtext.includes('↓') && metric.subtext.includes('faster')
-                ? 'text-green-600' : metric.subtext.includes('↓')
+              metric.subtext.includes('â†‘') || metric.subtext.includes('+')
+                ? 'text-green-600' : metric.subtext.includes('â†“') && metric.subtext.includes('faster')
+                ? 'text-green-600' : metric.subtext.includes('â†“')
                 ? 'text-red-600' : 'text-gray-500'
             }`}>{metric.subtext}</p>
           </div>
@@ -930,7 +400,7 @@ function AgentDashboard({
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              📋 {mockData.tableTitle}
+              ðŸ“‹ {mockData.tableTitle}
             </button>
             <button
               onClick={() => setActiveTab('activity')}
@@ -940,7 +410,7 @@ function AgentDashboard({
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              🕐 Activity Feed
+              ðŸ• Activity Feed
             </button>
           </div>
         </div>
@@ -966,7 +436,7 @@ function AgentDashboard({
                       statusFilter === 'green' ? 'bg-green-600 text-white ring-2 ring-green-300' : 'bg-green-100 text-green-800 hover:bg-green-200'
                     }`}
                   >
-                    ✓ Completed ({statusCounts.green})
+                    âœ“ Completed ({statusCounts.green})
                   </button>
                 )}
                 {statusCounts.amber && statusCounts.amber > 0 && (
@@ -976,7 +446,7 @@ function AgentDashboard({
                       statusFilter === 'amber' ? 'bg-amber-600 text-white ring-2 ring-amber-300' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
                     }`}
                   >
-                    ⏳ Pending ({statusCounts.amber})
+                    â³ Pending ({statusCounts.amber})
                   </button>
                 )}
                 {statusCounts.red && statusCounts.red > 0 && (
@@ -986,7 +456,7 @@ function AgentDashboard({
                       statusFilter === 'red' ? 'bg-red-600 text-white ring-2 ring-red-300' : 'bg-red-100 text-red-800 hover:bg-red-200'
                     }`}
                   >
-                    ⚠ Critical ({statusCounts.red})
+                    âš  Critical ({statusCounts.red})
                   </button>
                 )}
                 {statusCounts.blue && statusCounts.blue > 0 && (
@@ -996,7 +466,7 @@ function AgentDashboard({
                       statusFilter === 'blue' ? 'bg-blue-600 text-white ring-2 ring-blue-300' : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
                     }`}
                   >
-                    🆕 New ({statusCounts.blue})
+                    ðŸ†• New ({statusCounts.blue})
                   </button>
                 )}
                 {statusFilter && (
@@ -1116,7 +586,7 @@ function AgentDashboard({
                             className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1 transition"
                           >
                             <Eye className="w-4 h-4" />
-                            <span>View Details →</span>
+                            <span>View Details â†’</span>
                           </button>
                         )}
                       </td>
@@ -1221,7 +691,7 @@ function AgentDashboard({
             <h4 className="text-sm font-bold text-gray-900">Accuracy</h4>
             <Shield className="w-5 h-5 text-green-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{randBetween(96, 99)}.{randBetween(1, 9)}%</p>
+          <p className="text-3xl font-bold text-gray-900">97.8%</p>
           <p className="text-xs text-gray-500 mt-1">Overall precision rate</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
@@ -1229,7 +699,7 @@ function AgentDashboard({
             <h4 className="text-sm font-bold text-gray-900">Automation</h4>
             <Zap className="w-5 h-5 text-blue-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{randBetween(80, 95)}%</p>
+          <p className="text-3xl font-bold text-gray-900">89%</p>
           <p className="text-xs text-gray-500 mt-1">Fully automated tasks</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
@@ -1237,7 +707,7 @@ function AgentDashboard({
             <h4 className="text-sm font-bold text-gray-900">Performance</h4>
             <TrendingUp className="w-5 h-5 text-green-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">↑ {randBetween(10, 35)}%</p>
+          <p className="text-3xl font-bold text-gray-900">24%</p>
           <p className="text-xs text-gray-500 mt-1">Improvement vs last period</p>
         </div>
       </div>
@@ -1271,14 +741,14 @@ function AgentDashboard({
                     <div className="bg-green-100 p-1 rounded-full mt-0.5"><CheckCircle className="w-3.5 h-3.5 text-green-600" /></div>
                     <div>
                       <p className="text-xs font-bold text-gray-900">Received &amp; Classified</p>
-                      <p className="text-xs text-gray-500">Today, {randBetween(8, 10)}:{String(randBetween(0, 59)).padStart(2, '0')} AM</p>
+                      <p className="text-xs text-gray-500">Today, 9:15 AM</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
                     <div className="bg-green-100 p-1 rounded-full mt-0.5"><CheckCircle className="w-3.5 h-3.5 text-green-600" /></div>
                     <div>
                       <p className="text-xs font-bold text-gray-900">Processing Complete</p>
-                      <p className="text-xs text-gray-500">Today, {randBetween(10, 11)}:{String(randBetween(0, 59)).padStart(2, '0')} AM</p>
+                      <p className="text-xs text-gray-500">Today, 10:42 AM</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
@@ -1409,7 +879,7 @@ function AgentDashboard({
   );
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDemoViewProps) {
@@ -1419,7 +889,7 @@ export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDe
 
   // When the workflow changes: clear cache and kick off ALL LLM calls in parallel
   useEffect(() => {
-    console.log('🔄 New workflow detected - generating mock data for all agents in parallel');
+    console.log('ðŸ”„ New workflow detected - generating mock data for all agents in parallel');
     setAgentDataCache(new Map());
     setActiveAgentIndex(0);
 
@@ -1430,17 +900,17 @@ export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDe
       generateAgentMockDataAsync(agent, originalTasks, idx, workflow.agents.length)
         .then(data => {
           if (!cancelled) {
-            console.log(`💾 Pre-fetched data for step ${idx + 1}: ${agent.name}`);
+            console.log(`ðŸ’¾ Pre-fetched data for step ${idx + 1}: ${agent.name}`);
             setAgentDataCache(prev => new Map(prev).set(agent.id, data));
           }
         })
         .catch(err => {
-          console.error(`❌ Pre-fetch failed for step ${idx + 1} (${agent.name}):`, err);
+          console.error(`âŒ Pre-fetch failed for step ${idx + 1} (${agent.name}):`, err);
         })
     );
 
     Promise.allSettled(promises).then(() => {
-      if (!cancelled) console.log('✅ All agent data pre-fetched');
+      if (!cancelled) console.log('âœ… All agent data pre-fetched');
     });
 
     return () => { cancelled = true; };
@@ -1467,7 +937,7 @@ export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDe
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Agentic Workflow Architect</h1>
-                <p className="text-sm text-gray-500">{workflow.agents.length}-Step Workflow • Live Preview</p>
+                <p className="text-sm text-gray-500">{workflow.agents.length}-Step Workflow â€¢ Live Preview</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
