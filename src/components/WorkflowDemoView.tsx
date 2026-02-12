@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Workflow, Agent } from '../types/workflow';
+import { generateAgentDashboardMockData } from '../services/mockDataGenerator';
 
 
 interface WorkflowDemoViewProps {
@@ -218,7 +219,7 @@ function generateRealisticMockData(
     // Reset seed for deterministic data generation
     resetSeed(agent.id, i);
     
-    const row: MockRow = { item_id: randomId('ITEM', i + stepIndex * 100) };
+    const row: MockRow = { id: randomId('ITEM', i + stepIndex * 100), item_id: randomId('ITEM', i + stepIndex * 100) };
     
     columns.forEach(col => {
       if (col.key === 'item_id') return; // Already set
@@ -374,7 +375,7 @@ function generateRealisticMockData(
     } else if (isValidate) {
       message = `Validated ${row['item_id']}: ${row['validation_status']} - ${row['errors_found']} errors found`;
     } else if (isApprove) {
-      message = `${row['reviewer']} ${row['decision']?.toLowerCase()} ${row['item_id']}${row['decision'] === 'Rejected' ? ' - Missing requirements' : ' - All criteria met'}`;
+      message = `${row['reviewer']} ${String(row['decision'] || '').toLowerCase()} ${row['item_id']}${row['decision'] === 'Rejected' ? ' - Missing requirements' : ' - All criteria met'}`;
     } else if (isCategorize) {
       message = `Categorized ${row['item_id']} as ${row['category']} with ${row['confidence_pct']} confidence`;
     } else if (isNotify) {
@@ -465,7 +466,7 @@ function determineColumnsFromTasks(actions: string[]): { key: string; label: str
   return uniqueColumns;
 }
 
-// Generate mock data for an agent
+// Generate mock data for an agent – tries LLM first, falls back to deterministic
 async function generateAgentMockDataAsync(
   agent: Agent,
   workflowContext: string,
@@ -474,16 +475,45 @@ async function generateAgentMockDataAsync(
   previousAgent?: Agent,
   previousAgentData?: AgentMockData
 ): Promise<AgentMockData> {
+  // ── Try LLM-based generation first ──
   try {
-    console.log(`🎯 Generating data for step ${stepIndex + 1}/${totalSteps}: ${agent.name}`);
-    console.log(`   📋 Tasks:`, agent.actions.join(', '));
-    
+    console.log(`🤖 Calling LLM for step ${stepIndex + 1}/${totalSteps}: ${agent.name}`);
+
+    const aiData = await generateAgentDashboardMockData(
+      agent, workflowContext, stepIndex, totalSteps
+    );
+
+    const result: AgentMockData = {
+      metrics: aiData.metrics || [],
+      tableTitle: aiData.tableTitle || `${agent.name} Dashboard`,
+      tableSubtitle: aiData.tableSubtitle || agent.description,
+      columns: aiData.columns || [{ key: 'id', label: 'ID' }, { key: 'status', label: 'Status' }],
+      rows: (aiData.rows || []).map((row: any, i: number) => ({
+        ...row,
+        id: row.id || `ITEM-${String(i + 1).padStart(3, '0')}`,
+        _statusColor: row._statusColor || 'blue',
+      })),
+      uiType: aiData.uiType || 'table',
+      activityFeed: aiData.activityFeed || [],
+      processingSteps: agent.actions.map((a, i) => ({
+        label: a,
+        detail: i < agent.actions.length - 1 ? 'Completed' : 'In progress...',
+        done: i < agent.actions.length - 1,
+      })),
+    };
+
+    console.log(`✅ LLM generated ${result.rows.length} rows for "${result.tableTitle}"`);
+    return result;
+  } catch (llmError) {
+    console.warn('⚠️ LLM mock-data failed, falling back to deterministic:', llmError);
+  }
+
+  // ── Deterministic fallback ──
+  try {
+    console.log(`🎯 Deterministic fallback for step ${stepIndex + 1}/${totalSteps}: ${agent.name}`);
     const columns = determineColumnsFromTasks(agent.actions);
-    console.log(`   🔧 Columns:`, columns.map(c => c.label).join(', '));
-    
     const result = generateRealisticMockData(agent, columns, workflowContext, stepIndex);
     console.log(`   ✅ Generated ${result.rows.length} rows for "${result.tableTitle}"`);
-    
     return result;
   } catch (error) {
     console.error('Failed to generate mock data:', error);
@@ -525,17 +555,11 @@ function StatusBadge({ status, color }: { status: string; color: string }) {
 function AgentDashboard({ 
   agent, 
   index, 
-  workflowContext, 
-  allAgents, 
-  previousAgentData,
-  onDataGenerated 
+  previousAgentData
 }: { 
   agent: Agent; 
   index: number; 
-  workflowContext: string; 
-  allAgents: Agent[];
   previousAgentData?: AgentMockData;
-  onDataGenerated: (agentId: string, data: AgentMockData) => void;
 }) {
   const [selectedRow, setSelectedRow] = useState<MockRow | null>(null);
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -566,42 +590,18 @@ function AgentDashboard({
     }, 500);
   };
 
-  // Load AI-generated mock data
+  // Receive pre-fetched LLM data from parent (all calls are made in WorkflowDemoView)
   useEffect(() => {
-    let cancelled = false;
-    setIsLoadingData(true);
-    setMockData(null); // Clear old data
-    
-    const previousAgent = index > 0 ? allAgents[index - 1] : undefined;
-    
-    // For steps after the first, wait until we have previous agent data
-    if (index > 0 && !previousAgentData) {
-      // Still waiting for previous agent data to be generated
-      // The component will re-render when previousAgentData becomes available
-      console.log(`⏳ Step ${index + 1} waiting for previous step data...`);
-      return;
+    if (previousAgentData) {
+      console.log(`📦 Using LLM-generated data for step ${index + 1}: ${agent.name}`);
+      setMockData(previousAgentData);
+      setIsLoadingData(false);
+    } else {
+      // Parent hasn't finished the LLM call yet – show loading
+      setIsLoadingData(true);
+      setMockData(null);
     }
-    
-    console.log(`🚀 Starting data generation for step ${index + 1}: ${agent.name}`);
-    
-    generateAgentMockDataAsync(agent, workflowContext, index, allAgents.length, previousAgent, previousAgentData)
-      .then(data => {
-        if (!cancelled) {
-          console.log(`✅ Data generated for step ${index + 1}: ${data.tableTitle}`);
-          setMockData(data);
-          setIsLoadingData(false);
-          onDataGenerated(agent.id, data);
-        }
-      })
-      .catch(err => {
-        console.error(`❌ Failed to generate data for step ${index + 1}:`, err);
-        if (!cancelled) {
-          setIsLoadingData(false);
-        }
-      });
-    
-    return () => { cancelled = true; };
-  }, [agent.id, workflowContext, index, previousAgentData]);
+  }, [previousAgentData, agent.id, index]);
 
   const color = getColor(agent.color);
 
@@ -1223,24 +1223,39 @@ export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDe
   const [agentDataCache, setAgentDataCache] = useState<Map<string, AgentMockData>>(new Map());
   const activeAgent = workflow.agents[activeAgentIndex];
 
-  // Clear cache when workflow changes (new workflow created)
+  // When the workflow changes: clear cache and kick off ALL LLM calls in parallel
   useEffect(() => {
-    console.log('🔄 New workflow detected - clearing data cache');
+    console.log('🔄 New workflow detected - generating mock data for all agents in parallel');
     setAgentDataCache(new Map());
     setActiveAgentIndex(0);
+
+    let cancelled = false;
+
+    // Fire one LLM call per agent, all in parallel
+    const promises = workflow.agents.map((agent, idx) =>
+      generateAgentMockDataAsync(agent, originalTasks, idx, workflow.agents.length)
+        .then(data => {
+          if (!cancelled) {
+            console.log(`💾 Pre-fetched data for step ${idx + 1}: ${agent.name}`);
+            setAgentDataCache(prev => new Map(prev).set(agent.id, data));
+          }
+        })
+        .catch(err => {
+          console.error(`❌ Pre-fetch failed for step ${idx + 1} (${agent.name}):`, err);
+        })
+    );
+
+    Promise.allSettled(promises).then(() => {
+      if (!cancelled) console.log('✅ All agent data pre-fetched');
+    });
+
+    return () => { cancelled = true; };
   }, [workflow.id, originalTasks]);
 
-  // Update cache when agent data is generated
-  const handleAgentDataGenerated = useCallback((agentId: string, data: AgentMockData) => {
-    console.log(`💾 Caching data for agent: ${agentId}`);
-    setAgentDataCache(prev => new Map(prev).set(agentId, data));
-  }, []);
-
-  // Get previous agent's data for continuity
-  const getPreviousAgentData = useCallback((currentIndex: number): AgentMockData | undefined => {
-    if (currentIndex === 0) return undefined;
-    const previousAgent = workflow.agents[currentIndex - 1];
-    return agentDataCache.get(previousAgent.id);
+  // Get cached data for an agent
+  const getCachedAgentData = useCallback((currentIndex: number): AgentMockData | undefined => {
+    const agent = workflow.agents[currentIndex];
+    return agentDataCache.get(agent.id);
   }, [agentDataCache, workflow.agents]);
 
   return (
@@ -1314,10 +1329,7 @@ export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDe
             key={activeAgent.id} 
             agent={activeAgent} 
             index={activeAgentIndex} 
-            workflowContext={originalTasks}
-            allAgents={workflow.agents}
-            previousAgentData={getPreviousAgentData(activeAgentIndex)}
-            onDataGenerated={handleAgentDataGenerated}
+            previousAgentData={getCachedAgentData(activeAgentIndex)}
           />
         )}
       </div>
