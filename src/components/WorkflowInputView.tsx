@@ -69,7 +69,7 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* How it works section - moved above input */}
-        <div className="mb-6 grid grid-cols-3 gap-4 animate-fade-in-up">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-up">
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
               <span className="text-blue-600 font-bold">1</span>

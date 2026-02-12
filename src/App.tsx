@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Workflow } from './types/workflow';
 import { generateWorkflowWithAI, regenerateWorkflowWithFeedback } from './services/azureOpenAI';
 import { WorkflowInputView } from './components/WorkflowInputView';
@@ -8,13 +8,30 @@ import { WorkflowDemoView } from './components/WorkflowDemoView';
 // App modes
 type AppMode = 'input' | 'review' | 'preview';
 
+// Restore workflow from sessionStorage on page refresh
+const _savedState: { workflow: Workflow; originalTasks: string } | null = (() => {
+  try {
+    const raw = sessionStorage.getItem('awa-state');
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+})();
+
 function App() {
-  const [mode, setMode] = useState<AppMode>('input');
+  const [mode, setMode] = useState<AppMode>(_savedState?.workflow ? 'preview' : 'input');
   const [isLoading, setIsLoading] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [workflow, setWorkflow] = useState<Workflow | null>(null);
-  const [originalTasks, setOriginalTasks] = useState<string>('');
+  const [workflow, setWorkflow] = useState<Workflow | null>(_savedState?.workflow ?? null);
+  const [originalTasks, setOriginalTasks] = useState<string>(_savedState?.originalTasks ?? '');
   const [error, setError] = useState<string | null>(null);
+
+  // Persist workflow to sessionStorage so it survives page refresh
+  useEffect(() => {
+    if (workflow) {
+      sessionStorage.setItem('awa-state', JSON.stringify({ workflow, originalTasks }));
+    } else {
+      sessionStorage.removeItem('awa-state');
+    }
+  }, [workflow, originalTasks]);
 
   const handleGenerate = async (tasks: string) => {
     setIsLoading(true);

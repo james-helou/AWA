@@ -845,6 +845,16 @@ function AgentDashboard({
     });
   }, [mockData, searchQuery, statusFilter]);
 
+  // Stable random values for bottom stats (avoid re-roll on every render)
+  const bottomStats = useMemo(() => {
+    resetSeed(agent.id, 999);
+    return {
+      accuracy: `${randBetween(96, 99)}.${randBetween(1, 9)}%`,
+      automation: `${randBetween(80, 95)}%`,
+      performance: `↑ ${randBetween(10, 35)}%`,
+    };
+  }, [agent.id]);
+
   // Show loading state while data is being generated
   if (isLoadingData || !mockData) {
     return (
@@ -877,7 +887,7 @@ function AgentDashboard({
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {mockData.metrics.map((metric, i) => (
           <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-3">
@@ -1195,13 +1205,13 @@ function AgentDashboard({
       </div>
 
       {/* Bottom Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-bold text-gray-900">Accuracy</h4>
             <Shield className="w-5 h-5 text-green-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{randBetween(96, 99)}.{randBetween(1, 9)}%</p>
+          <p className="text-3xl font-bold text-gray-900">{bottomStats.accuracy}</p>
           <p className="text-xs text-gray-500 mt-1">Overall precision rate</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
@@ -1209,7 +1219,7 @@ function AgentDashboard({
             <h4 className="text-sm font-bold text-gray-900">Automation</h4>
             <Zap className="w-5 h-5 text-blue-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{randBetween(80, 95)}%</p>
+          <p className="text-3xl font-bold text-gray-900">{bottomStats.automation}</p>
           <p className="text-xs text-gray-500 mt-1">Fully automated tasks</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
@@ -1217,7 +1227,7 @@ function AgentDashboard({
             <h4 className="text-sm font-bold text-gray-900">Performance</h4>
             <TrendingUp className="w-5 h-5 text-green-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">↑ {randBetween(10, 35)}%</p>
+          <p className="text-3xl font-bold text-gray-900">{bottomStats.performance}</p>
           <p className="text-xs text-gray-500 mt-1">Improvement vs last period</p>
         </div>
       </div>
@@ -1462,7 +1472,7 @@ export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDe
       {/* Agent Step Navigation */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-center space-x-1">
+          <div className="flex items-center justify-center space-x-1 overflow-x-auto pb-1">
             {workflow.agents.map((agent, idx) => {
               const c = getColor(agent.color);
               const isActive = activeAgentIndex === idx;
