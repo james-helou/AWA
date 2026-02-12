@@ -882,16 +882,8 @@ function AgentDashboard({
           <div className="flex-1">
             <h3 className="text-xl font-bold text-gray-900 mb-2">{mockData.tableTitle}</h3>
             {mockData.tableSubtitle && (
-              <p className="text-sm text-gray-700 mb-4">{mockData.tableSubtitle}</p>
+              <p className="text-sm text-gray-700">{mockData.tableSubtitle}</p>
             )}
-            <div className="grid grid-cols-3 gap-3">
-              {mockData.metrics.slice(0, 3).map((m, i) => (
-                <div key={i} className={`bg-white/80 backdrop-blur rounded-lg p-3 border ${color.border}`}>
-                  <p className="text-xs text-gray-600">{m.label}</p>
-                  <p className="text-xl font-bold text-gray-900">{m.value}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
