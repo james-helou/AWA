@@ -74,8 +74,8 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
               <span className="text-blue-600 font-bold">1</span>
             </div>
-            <h3 className="font-semibold text-gray-900 mb-1">Paste Tasks</h3>
-            <p className="text-sm text-gray-600">Enter your process tasks, one per line. Include all steps from start to finish.</p>
+            <h3 className="font-semibold text-gray-900 mb-1">Describe Your Process</h3>
+            <p className="text-sm text-gray-600">Enter your process as free-form text or list each task line by line — whatever feels natural.</p>
           </div>
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
             <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
