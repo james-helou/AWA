@@ -88,8 +88,8 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
             <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mb-3">
               <span className="text-green-600 font-bold">3</span>
             </div>
-            <h3 className="font-semibold text-gray-900 mb-1">Get Workflow</h3>
-            <p className="text-sm text-gray-600">Receive a complete multi-agent workflow with data sources and touchpoints.</p>
+            <h3 className="font-semibold text-gray-900 mb-1">Preview Simulation</h3>
+            <p className="text-sm text-gray-600">See a simulated preview of your multi-agent workflow in action, as it would look when agents are live.</p>
           </div>
         </div>
 
