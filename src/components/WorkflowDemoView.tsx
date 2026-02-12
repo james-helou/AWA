@@ -291,7 +291,7 @@ function generateRealisticMockData(
   const inProgressCount = rows.length - completedCount - pendingCount;
 
   const metrics = [
-    { label: `Total ${agentWords[0] || 'Items'}`, value: String(rows.length * randBetween(3, 8)), subtext: 'today', color: 'blue' },
+    { label: 'Total', value: String(rows.length * randBetween(3, 8)), subtext: 'today', color: 'blue' },
     { label: 'Completed', value: String(completedCount * randBetween(2, 5)), subtext: `${Math.round((completedCount / rows.length) * 100)}% success`, color: 'green' },
     { label: 'In Progress', value: String(inProgressCount + randBetween(1, 3)), subtext: 'active now', color: 'amber' },
   ];
