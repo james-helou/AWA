@@ -56,8 +56,6 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
     }
   };
 
-  const taskCount = tasks.trim() ? tasks.trim().split('\n').filter(line => line.trim()).length : 0;
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30">
       {/* Header */}
@@ -130,16 +128,10 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
               disabled={isLoading}
             />
 
-            {/* Task Counter & Tips */}
+            {/* Tips */}
             <div className="flex items-center justify-between mt-3">
-              <div className="flex items-center space-x-4 text-sm text-gray-500">
-                {taskCount > 0 && (
-                  <span className="flex items-center space-x-1.5 animate-fade-in">
-                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                    <span>{taskCount} task{taskCount !== 1 ? 's' : ''} detected</span>
-                  </span>
-                )}
-                <span className="text-gray-400">Ctrl+Enter to generate</span>
+              <div className="flex items-center space-x-4 text-sm text-gray-400">
+                <span>Ctrl+Enter to generate</span>
               </div>
             </div>
 
@@ -159,11 +151,7 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
 
           {/* Submit Button */}
           <div className="p-6 bg-gradient-to-r from-gray-50 to-blue-50/30 border-t border-gray-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <Sparkles className="w-4 h-4 text-purple-500" />
-                <span>Powered by AI workflow analysis</span>
-              </div>
+            <div className="flex items-center justify-end">
               <button
                 onClick={handleSubmit}
                 disabled={!tasks.trim() || isLoading}

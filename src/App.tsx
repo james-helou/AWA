@@ -65,6 +65,7 @@ function App() {
     return (
       <WorkflowDemoView
         workflow={workflow}
+        originalTasks={originalTasks}
         onBack={handleBack}
       />
     );
@@ -80,16 +81,14 @@ function App() {
       />
       
       {/* Agent Review Modal */}
-        {mode === 'review' && workflow && (
-          <AgentReviewModal
-            workflow={workflow}
-            isRegenerating={isRegenerating}
-            onAccept={handleAcceptAgents}
-            onRequestChanges={handleRequestChanges}
-          />
-        )}
-        <span className="px-2 py-0.5 text-xs font-semibold bg-amber-500 text-amber-900 rounded">DEMO MODE</span>
-        <span className="text-sm text-gray-300">Agentc Workflow Architect — hardcoded demo</span>
+      {mode === 'review' && workflow && (
+        <AgentReviewModal
+          workflow={workflow}
+          isRegenerating={isRegenerating}
+          onAccept={handleAcceptAgents}
+          onRequestChanges={handleRequestChanges}
+        />
+      )}
     </>
   );
 }

@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Workflow, Agent } from '../types/workflow';
+
 
 interface WorkflowDemoViewProps {
   workflow: Workflow;
+  originalTasks: string;
   onBack: () => void;
 }
 
@@ -116,13 +118,31 @@ function getColor(c: string) {
 }
 
 // ─── Mock Data Helpers ──────────────────────────────────────────────────────
-const personNames = ['Sarah Chen', 'Mike Rodriguez', 'Emily Watson', 'James Park', 'Lisa Thompson', 'David Kim', 'Rachel Adams', 'Tom Martinez', 'Anna Petrov', "Chris O'Brien"];
-const companyNames = ['Acme Corp', 'Vertex Industries', 'Pinnacle Group', 'Horizon Ltd', 'Atlas Partners', 'Summit Holdings', 'Nexus Systems', 'Catalyst Inc', 'Zenith Co', 'Quantum Tech'];
+const firstNames = ['Sarah', 'Mike', 'Emily', 'James', 'Lisa', 'David', 'Rachel', 'Tom', 'Anna', 'Chris', 'Maria', 'John', 'Jessica', 'Robert', 'Michelle', 'Carlos', 'Amanda', 'Kevin', 'Nicole', 'Brandon', 'Stephanie', 'Ryan', 'Jennifer', 'Daniel', 'Laura', 'Andrew', 'Samantha', 'Eric', 'Ashley', 'Jason'];
+const lastNames = ['Chen', 'Rodriguez', 'Watson', 'Park', 'Thompson', 'Kim', 'Adams', 'Martinez', 'Petrov', "O'Brien", 'Singh', 'Johnson', 'Williams', 'Lee', 'Garcia', 'Patel', 'Taylor', 'Anderson', 'Wilson', 'Moore', 'Jackson', 'White', 'Harris', 'Martin', 'Thompson', 'Lopez', 'Gonzalez', 'Clark', 'Lewis', 'Walker'];
+const companyNames = ['Acme Corp', 'Vertex Industries', 'Pinnacle Group', 'Horizon Ltd', 'Atlas Partners', 'Summit Holdings', 'Nexus Systems', 'Catalyst Inc', 'Zenith Co', 'Quantum Tech', 'Phoenix Solutions', 'Titan Enterprises', 'Stellar Corp', 'Vanguard Inc', 'Meridian Group'];
 const departments = ['Operations', 'Finance', 'Engineering', 'Marketing', 'Sales', 'HR', 'Legal', 'Compliance', 'Product', 'Support'];
 
-function pickRandom<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
-function randBetween(a: number, b: number) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+// Seeded random for deterministic data generation
+let seed = 12345;
+function seededRandom() {
+  seed = (seed * 9301 + 49297) % 233280;
+  return seed / 233280;
+}
+function resetSeed(agentId: string, rowIndex: number) {
+  // Create deterministic seed from agent ID and row index
+  let hash = 0;
+  for (let i = 0; i < agentId.length; i++) {
+    hash = ((hash << 5) - hash) + agentId.charCodeAt(i);
+    hash = hash & hash;
+  }
+  seed = Math.abs(hash + rowIndex * 1000);
+}
+
+function pickRandom<T>(arr: T[]): T { return arr[Math.floor(seededRandom() * arr.length)]; }
+function randBetween(a: number, b: number) { return Math.floor(seededRandom() * (b - a + 1)) + a; }
 function randomId(prefix: string, i: number) { return `${prefix}-${String(i + 1).padStart(3, '0')}`; }
+function generateRandomName() { return `${pickRandom(firstNames)} ${pickRandom(lastNames)}`; }
 
 interface MockRow { id: string; [key: string]: string | number; }
 
@@ -133,217 +153,356 @@ interface AgentMockData {
   columns: { key: string; label: string }[];
   rows: MockRow[];
   processingSteps: { label: string; detail: string; done: boolean }[];
+  uiType?: string;
+  activityFeed?: Array<{ id: string; type: string; message: string; time: string; user?: string; metadata?: any }>;
 }
 
-function generateAgentMockData(agent: Agent, index: number): AgentMockData {
-  const kw = (agent.description + ' ' + agent.actions.join(' ')).toLowerCase();
-
-  if (kw.match(/email|receive|ingest|intake|collect|monitor|scan|incoming|fetch|scrape/)) {
-    return {
-      metrics: [
-        { label: 'Items Received', value: String(randBetween(120, 500)), subtext: `+${randBetween(5, 30)} today`, color: 'blue' },
-        { label: 'Processed', value: String(randBetween(80, 400)), subtext: `${randBetween(85, 99)}% auto`, color: 'green' },
-        { label: 'Avg Processing', value: `${(Math.random() * 3 + 0.5).toFixed(1)} min`, subtext: `↓ ${randBetween(5, 25)}% faster`, color: 'purple' },
-        { label: 'Flagged', value: String(randBetween(2, 15)), subtext: 'Needs review', color: 'amber' },
-      ],
-      tableTitle: 'Incoming Items',
-      tableSubtitle: `Items being monitored and processed by ${agent.name}`,
-      columns: [
-        { key: 'id', label: 'ID' }, { key: 'source', label: 'Source' },
-        { key: 'subject', label: 'Subject' }, { key: 'received', label: 'Received' },
-        { key: 'status', label: 'Status' },
-      ],
-      rows: [
-        { id: randomId('IN', 0), source: 'Email', subject: 'Daily Operations Report', received: '10:23 AM', status: 'new', _statusColor: 'blue' },
-        { id: randomId('IN', 1), source: 'API', subject: 'System Alert: Threshold Exceeded', received: '10:15 AM', status: 'new', _statusColor: 'blue' },
-        { id: randomId('IN', 2), source: 'Webhook', subject: 'Vendor Update Notification', received: '9:45 AM', status: 'processing', _statusColor: 'amber' },
-        { id: randomId('IN', 3), source: 'Email', subject: 'Monthly Summary Report', received: '9:30 AM', status: 'processed', _statusColor: 'green' },
-        { id: randomId('IN', 4), source: 'File Upload', subject: 'Quarterly Data Export', received: '9:12 AM', status: 'processed', _statusColor: 'green' },
-        { id: randomId('IN', 5), source: 'Email', subject: 'Action Required: Review Pending', received: '8:55 AM', status: 'processed', _statusColor: 'green' },
-      ],
-      processingSteps: agent.actions.map((a, i) => ({ label: a, detail: i < agent.actions.length - 1 ? 'Completed successfully' : 'In progress...', done: i < agent.actions.length - 1 })),
-    };
+// Generate realistic mock data entirely in TypeScript (no AI calls)
+function generateRealisticMockData(
+  agent: Agent,
+  columns: { key: string; label: string }[],
+  workflowContext: string,
+  stepIndex: number
+): AgentMockData {
+  // Seed based on agent ID for deterministic row count
+  resetSeed(agent.id, 0);
+  const numRows = randBetween(5, 7);
+  const rows: MockRow[] = [];
+  
+  // Determine agent type from actions
+  const actions = agent.actions.join(' ').toLowerCase();
+  const isExtract = actions.includes('extract') || actions.includes('parse');
+  const isValidate = actions.includes('validate') || actions.includes('check') || actions.includes('verify');
+  const isApprove = actions.includes('approve') || actions.includes('review') || actions.includes('deny');
+  const isCategorize = actions.includes('categorize') || actions.includes('classify');
+  const isNotify = actions.includes('notify') || actions.includes('send') || actions.includes('route');
+  const isIntake = actions.includes('intake') || actions.includes('ingest') || actions.includes('receive');
+  const isRecord = actions.includes('record') || actions.includes('store') || actions.includes('save');
+  
+  // Expanded sample data pools for more variety
+  const emails = [
+    'john.smith@acme.com', 'sarah.jones@vertex.com', 'michael.chen@pinnacle.com', 
+    'emma.wilson@atlas.io', 'david.kim@zenith.co', 'rachel.patel@quantum.ai', 
+    'james.garcia@horizon.net', 'lisa.nguyen@nexus.com', 'alex.martinez@summit.io',
+    'priya.sharma@catalyst.ai', 'omar.hassan@vanguard.com', 'zoe.anderson@stellar.net'
+  ];
+  const phones = [
+    '+1-555-0123', '(555) 234-5678', '+1-555-9012', '555-345-6789', 
+    '+1-555-7890', '(555) 456-7890', '+1-555-2468', '(555) 678-9012',
+    '+1-555-3456', '(555) 890-1234', '+1-555-5678', '(555) 123-4567'
+  ];
+  const addresses = [
+    '123 Main St, Boston MA 02101', '456 Oak Ave, Seattle WA 98101', 
+    '789 Pine Rd, Austin TX 73301', '321 Elm St, Denver CO 80201', 
+    '654 Maple Dr, Portland OR 97201', '987 Cedar Ln, Phoenix AZ 85001',
+    '246 Birch Way, Miami FL 33101', '135 Spruce Ct, Chicago IL 60601'
+  ];
+  const ages = ['18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30'];
+  const heights = ['5\'5"', '5\'6"', '5\'7"', '5\'8"', '5\'9"', '5\'10"', '5\'11"', '6\'0"', '6\'1"', '6\'2"'];
+  const weights = ['145 lbs', '155 lbs', '160 lbs', '165 lbs', '170 lbs', '175 lbs', '180 lbs', '185 lbs', '190 lbs'];
+  const fullNames = [
+    'Alex Johnson', 'Maya Patel', 'Carlos Rodriguez', 'Leila Hassan', 
+    'Marcus Chen', 'Zara Williams', 'Jamal Thompson', 'Sofia Kovac',
+    'Dmitri Volkov', 'Amira Said', 'Kenji Tanaka', 'Isabella Santos'
+  ];
+  const categories = ['Finance', 'HR', 'Operations', 'Sales', 'Support', 'Engineering', 'Marketing', 'Legal', 'Product'];
+  const reviewers = ['Emily Watson', 'Michael Chen', 'Sarah Lopez', 'David Kim', 'Rachel Adams', 'James Park', 'Lisa Zhang', 'Omar Johnson'];
+  const statuses = ['Complete', 'Active', 'Pending', 'In Review', 'Processing'];
+  const documents = [
+    'Application_001.pdf', 'Form_042.pdf', 'Submission_127.pdf', 
+    'Request_A55.pdf', 'File_098.pdf', 'Document_K12.pdf',
+    'Report_B23.pdf', 'Contract_C78.pdf', 'Agreement_D90.pdf'
+  ];
+  
+  for (let i = 0; i < numRows; i++) {
+    // Reset seed for deterministic data generation
+    resetSeed(agent.id, i);
+    
+    const row: MockRow = { item_id: randomId('ITEM', i + stepIndex * 100) };
+    
+    columns.forEach(col => {
+      if (col.key === 'item_id') return; // Already set
+      
+      // Fill in values based on column type
+      if (col.key === 'extracted_email') {
+        row[col.key] = pickRandom(emails);
+      } else if (col.key === 'extracted_phone') {
+        row[col.key] = pickRandom(phones);
+      } else if (col.key === 'extracted_address') {
+        row[col.key] = pickRandom(addresses);
+      } else if (col.key === 'extracted_age') {
+        row[col.key] = pickRandom(ages);
+      } else if (col.key === 'extracted_height') {
+        row[col.key] = pickRandom(heights);
+      } else if (col.key === 'extracted_weight') {
+        row[col.key] = pickRandom(weights);
+      } else if (col.key === 'extracted_name') {
+        row[col.key] = pickRandom(fullNames);
+      } else if (col.key === 'confidence') {
+        row[col.key] = randBetween(85, 99) + '%';
+      } else if (col.key === 'validation_status') {
+        row[col.key] = seededRandom() > 0.3 ? 'Valid' : 'Invalid';
+      } else if (col.key === 'errors_found') {
+        row[col.key] = row['validation_status'] === 'Valid' ? '0' : String(randBetween(1, 4));
+      } else if (col.key === 'category') {
+        row[col.key] = pickRandom(categories);
+      } else if (col.key === 'confidence_pct') {
+        row[col.key] = randBetween(78, 98) + '%';
+      } else if (col.key === 'decision') {
+        const rand = seededRandom();
+        row[col.key] = rand > 0.4 ? 'Approved' : rand > 0.2 ? 'Rejected' : 'Pending';
+      } else if (col.key === 'reviewer') {
+        row[col.key] = row['decision'] === 'Pending' ? '-' : pickRandom(reviewers);
+      } else if (col.key === 'reviewed_date') {
+        row[col.key] = row['decision'] === 'Pending' ? '-' : seededRandom() > 0.5 ? 'Feb 12, 2026' : 'Feb 11, 2026';
+      } else if (col.key === 'calculated_score') {
+        row[col.key] = (randBetween(50, 100) / 10).toFixed(1);
+      } else if (col.key === 'risk_level') {
+        const score = parseFloat(String(row['calculated_score'] || '5'));
+        row[col.key] = score > 7.5 ? 'Low' : score > 5 ? 'Medium' : 'High';
+      } else if (col.key === 'destination') {
+        row[col.key] = pickRandom(emails);
+      } else if (col.key === 'delivery_status') {
+        row[col.key] = pickRandom(['Sent', 'Delivered', 'Pending']);
+      } else if (col.key === 'sent_date') {
+        const hour = randBetween(9, 17);
+        const displayHour = hour > 12 ? hour - 12 : hour;
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const day = seededRandom() > 0.5 ? 'Feb 12' : 'Feb 11';
+        row[col.key] = `${day}, ${displayHour}:${String(randBetween(10, 59)).padStart(2, '0')} ${ampm}`;
+      } else if (col.key === 'applicant_name') {
+        row[col.key] = pickRandom(fullNames);
+      } else if (col.key === 'document') {
+        row[col.key] = pickRandom(documents);
+      } else if (col.key === 'submitted_by') {
+        row[col.key] = pickRandom(fullNames);
+      } else if (col.key === 'status') {
+        if (isApprove) {
+          row[col.key] = row['decision'] === 'Approved' ? 'Approved' : row['decision'] === 'Rejected' ? 'Declined' : 'Under Review';
+        } else if (isValidate) {
+          row[col.key] = row['validation_status'] === 'Valid' ? 'Validated' : 'Failed';
+        } else if (isNotify) {
+          row[col.key] = row['delivery_status'];
+        } else {
+          row[col.key] = pickRandom(statuses);
+        }
+      }
+    });
+    
+    // Add status color
+    if (row['status'] === 'Approved' || row['status'] === 'Validated' || row['status'] === 'Complete' || row['status'] === 'Delivered') {
+      row['_statusColor'] = 'green';
+    } else if (row['status'] === 'Declined' || row['status'] === 'Failed') {
+      row['_statusColor'] = 'red';
+    } else if (row['status'] === 'Pending' || row['status'] === 'Under Review') {
+      row['_statusColor'] = 'amber';
+    } else {
+      row['_statusColor'] = 'blue';
+    }
+    
+    rows.push(row);
   }
-
-  if (kw.match(/extract|parse|read|analyz|classify|interpret|understand|nlp|ocr/)) {
-    return {
-      metrics: [
-        { label: 'Documents Scanned', value: String(randBetween(500, 3000)), subtext: 'Total processed', color: 'blue' },
-        { label: 'Fields Extracted', value: String(randBetween(2000, 10000)), subtext: 'Across all docs', color: 'purple' },
-        { label: 'Avg Confidence', value: `${randBetween(92, 99)}%`, subtext: '↑ Improving', color: 'green' },
-        { label: 'Needs Review', value: String(randBetween(3, 12)), subtext: 'Low confidence', color: 'amber' },
-      ],
-      tableTitle: 'Document Extraction Queue',
-      tableSubtitle: `AI-powered extraction and analysis by ${agent.name}`,
-      columns: [
-        { key: 'id', label: 'ID' }, { key: 'document', label: 'Document' },
-        { key: 'fields', label: 'Fields Found' }, { key: 'confidence', label: 'Confidence' },
-        { key: 'status', label: 'Status' },
-      ],
-      rows: [
-        { id: randomId('DOC', 0), document: 'Q4_Financial_Report.pdf', fields: randBetween(8, 20), confidence: `${randBetween(95, 99)}%`, status: 'complete', _statusColor: 'green' },
-        { id: randomId('DOC', 1), document: 'Vendor_Contract_v2.docx', fields: randBetween(10, 25), confidence: `${randBetween(93, 98)}%`, status: 'complete', _statusColor: 'green' },
-        { id: randomId('DOC', 2), document: 'Invoice_Feb2026.pdf', fields: randBetween(5, 12), confidence: `${randBetween(85, 92)}%`, status: 'review', _statusColor: 'amber' },
-        { id: randomId('DOC', 3), document: 'Policy_Update.pdf', fields: randBetween(12, 30), confidence: `${randBetween(96, 99)}%`, status: 'complete', _statusColor: 'green' },
-        { id: randomId('DOC', 4), document: 'Client_Submission.xlsx', fields: randBetween(15, 40), confidence: `${randBetween(97, 99)}%`, status: 'processing', _statusColor: 'blue' },
-      ],
-      processingSteps: agent.actions.map((a, i) => ({ label: a, detail: i < agent.actions.length - 1 ? 'Completed successfully' : 'Running analysis...', done: i < agent.actions.length - 1 })),
-    };
+  
+  // Generate screen title based on agent type
+  let screenTitle = 'Dashboard';
+  let screenSubtitle = agent.description;
+  
+  if (isIntake) {
+    screenTitle = 'Intake Dashboard';
+    screenSubtitle = 'Incoming applications and submissions';
+  } else if (isExtract) {
+    screenTitle = 'Data Extraction Results';
+    screenSubtitle = 'Extracted information from submitted forms';
+  } else if (isValidate) {
+    screenTitle = 'Validation Dashboard';
+    screenSubtitle = 'Data quality and validation results';
+  } else if (isApprove) {
+    screenTitle = 'Approval Decisions';
+    screenSubtitle = 'Review and approval status';
+  } else if (isCategorize) {
+    screenTitle = 'Categorization Results';
+    screenSubtitle = 'Automated classification and routing';
+  } else if (isNotify) {
+    screenTitle = 'Notification Status';
+    screenSubtitle = 'Delivery confirmation and tracking';
+  } else if (isRecord) {
+    screenTitle = 'Records Database';
+    screenSubtitle = 'Stored and archived records';
   }
-
-  if (kw.match(/valid|check|verif|match|reconcil|compar|audit|compliance|rule/)) {
-    return {
-      metrics: [
-        { label: 'Items Validated', value: String(randBetween(200, 1500)), subtext: 'This period', color: 'green' },
-        { label: 'Pass Rate', value: `${randBetween(94, 99)}%`, subtext: '↑ 2% this week', color: 'green' },
-        { label: 'Flagged Items', value: String(randBetween(5, 30)), subtext: 'Requires attention', color: 'amber' },
-        { label: 'Rules Active', value: String(randBetween(15, 50)), subtext: 'All passing', color: 'blue' },
-      ],
-      tableTitle: 'Validation Results',
-      tableSubtitle: `Automated checks and compliance validation by ${agent.name}`,
-      columns: [
-        { key: 'id', label: 'ID' }, { key: 'item', label: 'Item' },
-        { key: 'checks', label: 'Checks Run' }, { key: 'passed', label: 'Passed' },
-        { key: 'status', label: 'Result' },
-      ],
-      rows: [
-        { id: randomId('VAL', 0), item: `${pickRandom(companyNames)} - Record #${randBetween(1000, 9999)}`, checks: 6, passed: '6/6', status: 'passed', _statusColor: 'green' },
-        { id: randomId('VAL', 1), item: `${pickRandom(companyNames)} - Transaction #${randBetween(1000, 9999)}`, checks: 5, passed: '5/5', status: 'passed', _statusColor: 'green' },
-        { id: randomId('VAL', 2), item: `${pickRandom(companyNames)} - Account #${randBetween(1000, 9999)}`, checks: 8, passed: '6/8', status: 'warning', _statusColor: 'amber' },
-        { id: randomId('VAL', 3), item: `${pickRandom(companyNames)} - Report #${randBetween(1000, 9999)}`, checks: 4, passed: '4/4', status: 'passed', _statusColor: 'green' },
-        { id: randomId('VAL', 4), item: `${pickRandom(companyNames)} - Submission #${randBetween(1000, 9999)}`, checks: 7, passed: '7/7', status: 'passed', _statusColor: 'green' },
-      ],
-      processingSteps: agent.actions.map((a, i) => ({ label: a, detail: i < agent.actions.length - 1 ? 'All checks passed' : 'Validating...', done: i < agent.actions.length - 1 })),
-    };
+  
+  // Generate metrics based on agent type
+  const metrics: { label: string; value: string; subtext: string; color: string }[] = [];
+  
+  if (isExtract) {
+    metrics.push({ label: 'Items Extracted', value: String(rows.length * randBetween(3, 5)), subtext: 'from documents', color: 'blue' });
+    metrics.push({ label: 'Success Rate', value: randBetween(92, 99) + '%', subtext: 'accuracy', color: 'green' });
+  } else if (isValidate) {
+    const passed = rows.filter(r => r['validation_status'] === 'Valid').length;
+    metrics.push({ label: 'Items Validated', value: String(rows.length), subtext: 'total checks', color: 'blue' });
+    metrics.push({ label: 'Passed', value: String(passed), subtext: Math.round((passed / rows.length) * 100) + '% pass rate', color: 'green' });
+    metrics.push({ label: 'Failed', value: String(rows.length - passed), subtext: 'with errors', color: 'red' });
+  } else if (isApprove) {
+    const approved = rows.filter(r => r['decision'] === 'Approved').length;
+    const rejected = rows.filter(r => r['decision'] === 'Rejected').length;
+    const pending = rows.filter(r => r['decision'] === 'Pending').length;
+    metrics.push({ label: 'Approved', value: String(approved), subtext: 'this week', color: 'green' });
+    metrics.push({ label: 'Rejected', value: String(rejected), subtext: 'with feedback', color: 'red' });
+    if (pending > 0) metrics.push({ label: 'Pending', value: String(pending), subtext: 'awaiting review', color: 'amber' });
+  } else if (isCategorize) {
+    metrics.push({ label: 'Items Categorized', value: String(rows.length * randBetween(4, 6)), subtext: 'auto-classified', color: 'blue' });
+    metrics.push({ label: 'High Confidence', value: String(rows.length - 1), subtext: 'above 90%', color: 'green' });
+  } else if (isNotify) {
+    const delivered = rows.filter(r => r['delivery_status'] === 'Delivered').length;
+    metrics.push({ label: 'Notifications Sent', value: String(rows.length), subtext: 'total messages', color: 'blue' });
+    metrics.push({ label: 'Delivered', value: String(delivered), subtext: 'confirmed', color: 'green' });
+  } else {
+    metrics.push({ label: 'Total Items', value: String(rows.length), subtext: 'processed', color: 'blue' });
+    metrics.push({ label: 'Completed', value: randBetween(85, 99) + '%', subtext: 'success rate', color: 'green' });
   }
-
-  if (kw.match(/noti|alert|send|commun|email.*(send|out)|message|remind|outreach|broadcast/)) {
-    return {
-      metrics: [
-        { label: 'Notifications Sent', value: String(randBetween(200, 1200)), subtext: `+${randBetween(10, 60)} today`, color: 'blue' },
-        { label: 'Delivery Rate', value: `${randBetween(96, 99)}%`, subtext: 'All channels', color: 'green' },
-        { label: 'Response Rate', value: `${randBetween(55, 85)}%`, subtext: `↑ ${randBetween(3, 15)}%`, color: 'purple' },
-        { label: 'Pending Responses', value: String(randBetween(10, 80)), subtext: 'Awaiting reply', color: 'amber' },
-      ],
-      tableTitle: 'Communication Log',
-      tableSubtitle: `Notifications and outreach managed by ${agent.name}`,
-      columns: [
-        { key: 'id', label: 'ID' }, { key: 'recipient', label: 'Recipient' },
-        { key: 'channel', label: 'Channel' }, { key: 'sent', label: 'Sent' },
-        { key: 'status', label: 'Status' },
-      ],
-      rows: personNames.slice(0, 6).map((name, i) => ({
-        id: randomId('MSG', i), recipient: name,
-        channel: ['Email', 'Slack', 'Email', 'SMS', 'Email', 'Teams'][i],
-        sent: `${randBetween(8, 11)}:${String(randBetween(0, 59)).padStart(2, '0')} AM`,
-        status: i < 4 ? 'delivered' : i === 4 ? 'opened' : 'pending',
-        _statusColor: i < 4 ? 'green' : i === 4 ? 'blue' : 'amber',
-      })),
-      processingSteps: agent.actions.map((a, i) => ({ label: a, detail: i < agent.actions.length - 1 ? 'Completed' : 'Sending batch...', done: i < agent.actions.length - 1 })),
-    };
+  
+  // Generate activity feed
+  const activityFeed: Array<{ id: string; type: string; message: string; time: string; user?: string }> = [];
+  const times = ['2 min ago', '5 min ago', '12 min ago', '25 min ago', '1 hour ago'];
+  
+  for (let i = 0; i < Math.min(5, rows.length); i++) {
+    const row = rows[i];
+    let message = '';
+    
+    if (isExtract) {
+      const field = row['extracted_email'] || row['extracted_name'] || row['extracted_phone'];
+      message = `Extracted ${columns.find(c => c.key !== 'item_id' && c.key !== 'status')?.label.toLowerCase()} from ${row['document'] || row['item_id']}: ${field}`;
+    } else if (isValidate) {
+      message = `Validated ${row['item_id']}: ${row['validation_status']} - ${row['errors_found']} errors found`;
+    } else if (isApprove) {
+      message = `${row['reviewer']} ${row['decision']?.toLowerCase()} ${row['item_id']}${row['decision'] === 'Rejected' ? ' - Missing requirements' : ' - All criteria met'}`;
+    } else if (isCategorize) {
+      message = `Categorized ${row['item_id']} as ${row['category']} with ${row['confidence_pct']} confidence`;
+    } else if (isNotify) {
+      message = `Notification sent to ${row['destination']}: ${row['delivery_status']}`;
+    } else {
+      message = `Processed ${row['item_id']} - Status: ${row['status']}`;
+    }
+    
+    activityFeed.push({
+      id: String(i),
+      type: row['_statusColor'] === 'green' ? 'success' : row['_statusColor'] === 'red' ? 'warning' : 'info',
+      message,
+      time: times[i] || times[times.length - 1],
+      user: isApprove && row['reviewer'] !== '-' ? String(row['reviewer']) : 'System'
+    });
   }
-
-  if (kw.match(/decision|route|assign|priorit|triage|classif|categoriz|dispatch/)) {
-    return {
-      metrics: [
-        { label: 'Items Routed', value: String(randBetween(100, 500)), subtext: 'Today', color: 'blue' },
-        { label: 'Auto-Resolved', value: `${randBetween(70, 92)}%`, subtext: 'No human needed', color: 'green' },
-        { label: 'Avg Decision Time', value: `${randBetween(2, 15)}s`, subtext: '↓ Faster', color: 'purple' },
-        { label: 'Escalated', value: String(randBetween(3, 20)), subtext: 'To senior team', color: 'red' },
-      ],
-      tableTitle: 'Routing Decisions',
-      tableSubtitle: `Intelligent routing and prioritization by ${agent.name}`,
-      columns: [
-        { key: 'id', label: 'ID' }, { key: 'item', label: 'Item' },
-        { key: 'decision', label: 'Decision' }, { key: 'assignee', label: 'Assigned To' },
-        { key: 'confidence', label: 'Confidence' },
-      ],
-      rows: [
-        { id: randomId('RTG', 0), item: `Request #${randBetween(4000, 5000)}`, decision: 'Fast Track', assignee: 'Auto-Processor', confidence: '98%', _statusColor: 'green' },
-        { id: randomId('RTG', 1), item: `Request #${randBetween(4000, 5000)}`, decision: 'Standard', assignee: pickRandom(departments), confidence: '92%', _statusColor: 'green' },
-        { id: randomId('RTG', 2), item: `Request #${randBetween(4000, 5000)}`, decision: 'Manual Review', assignee: pickRandom(personNames), confidence: '68%', _statusColor: 'amber' },
-        { id: randomId('RTG', 3), item: `Request #${randBetween(4000, 5000)}`, decision: 'Escalate', assignee: 'Senior Analyst', confidence: '45%', _statusColor: 'red' },
-        { id: randomId('RTG', 4), item: `Request #${randBetween(4000, 5000)}`, decision: 'Fast Track', assignee: 'Auto-Processor', confidence: '95%', _statusColor: 'green' },
-      ],
-      processingSteps: agent.actions.map((a, i) => ({ label: a, detail: i < agent.actions.length - 1 ? 'Rule applied' : 'Evaluating...', done: i < agent.actions.length - 1 })),
-    };
-  }
-
-  if (kw.match(/approv|review|human|manual|sign.?off|authorize|confirm|consent/)) {
-    return {
-      metrics: [
-        { label: 'Pending Approvals', value: String(randBetween(5, 25)), subtext: `${randBetween(2, 8)} high priority`, color: 'amber' },
-        { label: 'Approved Today', value: String(randBetween(10, 50)), subtext: 'All validated', color: 'green' },
-        { label: 'Avg Response Time', value: `${randBetween(15, 90)} min`, subtext: '↓ 20% faster', color: 'blue' },
-        { label: 'Rejected', value: String(randBetween(1, 8)), subtext: 'Sent back for rework', color: 'red' },
-      ],
-      tableTitle: 'Pending Approvals',
-      tableSubtitle: `Items requiring human review managed by ${agent.name}`,
-      columns: [
-        { key: 'id', label: 'ID' }, { key: 'item', label: 'Item' },
-        { key: 'requester', label: 'Requester' }, { key: 'amount', label: 'Amount' },
-        { key: 'urgency', label: 'Urgency' },
-      ],
-      rows: [
-        { id: randomId('APR', 0), item: 'Budget Request - Q2 Campaign', requester: pickRandom(personNames), amount: `$${randBetween(5, 50)},${randBetween(0, 9)}00`, urgency: 'high', _statusColor: 'red' },
-        { id: randomId('APR', 1), item: 'Vendor Contract Renewal', requester: pickRandom(personNames), amount: `$${randBetween(20, 100)}K/yr`, urgency: 'medium', _statusColor: 'amber' },
-        { id: randomId('APR', 2), item: 'Travel Expense Report', requester: pickRandom(personNames), amount: `$${randBetween(1, 5)},${randBetween(100, 999)}`, urgency: 'low', _statusColor: 'green' },
-        { id: randomId('APR', 3), item: 'Software License Upgrade', requester: pickRandom(personNames), amount: `$${randBetween(2, 15)},000`, urgency: 'medium', _statusColor: 'amber' },
-        { id: randomId('APR', 4), item: 'New Hire Equipment', requester: pickRandom(personNames), amount: `$${randBetween(2, 8)},${randBetween(0, 9)}00`, urgency: 'low', _statusColor: 'green' },
-      ],
-      processingSteps: agent.actions.map((a, i) => ({ label: a, detail: i < agent.actions.length - 1 ? 'Reviewed' : 'Awaiting sign-off', done: i < agent.actions.length - 1 })),
-    };
-  }
-
-  if (kw.match(/report|summary|dashboard|track|metric|analytics|insight|kpi|monitor/)) {
-    return {
-      metrics: [
-        { label: 'Items Processed', value: String(randBetween(150, 500)), subtext: `+${randBetween(5, 20)}% vs last week`, color: 'blue' },
-        { label: 'Avg Processing Time', value: `${(Math.random() * 4 + 1).toFixed(1)} min`, subtext: '↓ 18% improvement', color: 'green' },
-        { label: 'Success Rate', value: `${randBetween(95, 99)}.${randBetween(1, 9)}%`, subtext: '↑ Trending up', color: 'green' },
-        { label: 'Issues Detected', value: String(randBetween(2, 12)), subtext: 'Auto-resolved', color: 'amber' },
-      ],
-      tableTitle: 'Performance Summary',
-      tableSubtitle: `Analytics and reporting generated by ${agent.name}`,
-      columns: [
-        { key: 'id', label: 'Period' }, { key: 'processed', label: 'Processed' },
-        { key: 'success', label: 'Success Rate' }, { key: 'avgTime', label: 'Avg Time' },
-        { key: 'status', label: 'Trend' },
-      ],
-      rows: [
-        { id: 'This Week', processed: String(randBetween(200, 500)), success: `${randBetween(96, 99)}%`, avgTime: `${(Math.random() * 3 + 1).toFixed(1)} min`, status: '↑ Up', _statusColor: 'green' },
-        { id: 'Last Week', processed: String(randBetween(180, 450)), success: `${randBetween(94, 98)}%`, avgTime: `${(Math.random() * 4 + 1).toFixed(1)} min`, status: '→ Stable', _statusColor: 'blue' },
-        { id: '2 Weeks Ago', processed: String(randBetween(160, 400)), success: `${randBetween(93, 97)}%`, avgTime: `${(Math.random() * 5 + 1).toFixed(1)} min`, status: '→ Stable', _statusColor: 'blue' },
-        { id: '3 Weeks Ago', processed: String(randBetween(140, 380)), success: `${randBetween(91, 96)}%`, avgTime: `${(Math.random() * 5 + 2).toFixed(1)} min`, status: '↓ Down', _statusColor: 'amber' },
-      ],
-      processingSteps: agent.actions.map((a, i) => ({ label: a, detail: i < agent.actions.length - 1 ? 'Report generated' : 'Compiling latest...', done: i < agent.actions.length - 1 })),
-    };
-  }
-
-  // Default: generic task processing
+  
   return {
-    metrics: [
-      { label: 'Tasks Completed', value: String(randBetween(50, 300)), subtext: `+${randBetween(5, 25)} today`, color: 'blue' },
-      { label: 'In Progress', value: String(randBetween(3, 15)), subtext: 'Currently active', color: 'purple' },
-      { label: 'Success Rate', value: `${randBetween(92, 99)}%`, subtext: '↑ Improving', color: 'green' },
-      { label: 'Queue', value: String(randBetween(5, 30)), subtext: 'Waiting', color: 'amber' },
-    ],
-    tableTitle: 'Task Queue',
-    tableSubtitle: `Active tasks managed by ${agent.name}`,
-    columns: [
-      { key: 'id', label: 'ID' }, { key: 'task', label: 'Task' },
-      { key: 'assignee', label: 'Assignee' }, { key: 'updated', label: 'Updated' },
-      { key: 'status', label: 'Status' },
-    ],
-    rows: agent.actions.slice(0, 5).map((action, i) => ({
-      id: randomId('TASK', i), task: action,
-      assignee: i < 3 ? 'AI Agent' : pickRandom(personNames),
-      updated: i === 0 ? 'Just now' : `${randBetween(2, 45)} min ago`,
-      status: i === 0 ? 'in_progress' : i < 3 ? 'completed' : 'pending',
-      _statusColor: i === 0 ? 'blue' : i < 3 ? 'green' : 'amber',
+    metrics,
+    tableTitle: screenTitle,
+    tableSubtitle: screenSubtitle,
+    columns,
+    rows,
+    uiType: 'table',
+    activityFeed,
+    processingSteps: agent.actions.map((a, i) => ({
+      label: a,
+      detail: i < agent.actions.length - 1 ? 'Completed' : 'In progress...',
+      done: i < agent.actions.length - 1,
     })),
-    processingSteps: agent.actions.map((a, i) => ({ label: a, detail: i < agent.actions.length - 1 ? 'Done' : 'Processing...', done: i < agent.actions.length - 1 })),
   };
+}
+
+// Determine columns based on agent tasks
+function determineColumnsFromTasks(actions: string[]): { key: string; label: string }[] {
+  const columns: { key: string; label: string }[] = [];
+  
+  // Always include item identifier as first column
+  columns.push({ key: 'item_id', label: 'Item ID' });
+  
+  // Analyze each action and add appropriate columns
+  actions.forEach(action => {
+    const a = action.toLowerCase();
+    
+    if (a.includes('extract') || a.includes('parse')) {
+      if (a.includes('email')) columns.push({ key: 'extracted_email', label: 'Extracted Email' });
+      if (a.includes('phone')) columns.push({ key: 'extracted_phone', label: 'Extracted Phone' });
+      if (a.includes('address')) columns.push({ key: 'extracted_address', label: 'Extracted Address' });
+      if (a.includes('age')) columns.push({ key: 'extracted_age', label: 'Age' });
+      if (a.includes('height')) columns.push({ key: 'extracted_height', label: 'Height' });
+      if (a.includes('weight')) columns.push({ key: 'extracted_weight', label: 'Weight' });
+      if (a.includes('name') && !a.includes('rename')) columns.push({ key: 'extracted_name', label: 'Name' });
+      if (!columns.some(c => c.key === 'confidence')) {
+        columns.push({ key: 'confidence', label: 'Confidence' });
+      }
+    } else if (a.includes('validate') || a.includes('check') || a.includes('verify') || a.includes('enrich')) {
+      columns.push({ key: 'validation_status', label: 'Validation Status' });
+      columns.push({ key: 'errors_found', label: 'Errors Found' });
+    } else if (a.includes('categorize') || a.includes('classify')) {
+      columns.push({ key: 'category', label: 'Category' });
+      columns.push({ key: 'confidence_pct', label: 'Confidence %' });
+    } else if (a.includes('approve') || a.includes('review') || a.includes('decision') || a.includes('deny')) {
+      columns.push({ key: 'decision', label: 'Decision' });
+      columns.push({ key: 'reviewer', label: 'Reviewer' });
+      columns.push({ key: 'reviewed_date', label: 'Review Date' });
+    } else if (a.includes('calculate') || a.includes('score')) {
+      columns.push({ key: 'calculated_score', label: 'Score' });
+      columns.push({ key: 'risk_level', label: 'Risk Level' });
+    } else if (a.includes('route') || a.includes('send') || a.includes('forward') || a.includes('notify')) {
+      columns.push({ key: 'destination', label: 'Sent To' });
+      columns.push({ key: 'delivery_status', label: 'Delivery Status' });
+      columns.push({ key: 'sent_date', label: 'Sent Date' });
+    } else if (a.includes('intake') || a.includes('ingest') || a.includes('receive') || a.includes('normalize')) {
+      columns.push({ key: 'applicant_name', label: 'Applicant Name' });
+      columns.push({ key: 'submitted_by', label: 'Submitted By' });
+      columns.push({ key: 'document', label: 'Document' });
+    }
+  });
+  
+  if (!columns.some(c => c.key === 'status')) {
+    columns.push({ key: 'status', label: 'Status' });
+  }
+  
+  const uniqueColumns = columns.filter((col, index, self) =>
+    index === self.findIndex(c => c.key === col.key)
+  );
+  
+  return uniqueColumns;
+}
+
+// Generate mock data for an agent
+async function generateAgentMockDataAsync(
+  agent: Agent,
+  workflowContext: string,
+  stepIndex: number,
+  totalSteps: number,
+  previousAgent?: Agent,
+  previousAgentData?: AgentMockData
+): Promise<AgentMockData> {
+  try {
+    console.log(`🎯 Generating data for step ${stepIndex + 1}/${totalSteps}: ${agent.name}`);
+    console.log(`   📋 Tasks:`, agent.actions.join(', '));
+    
+    const columns = determineColumnsFromTasks(agent.actions);
+    console.log(`   🔧 Columns:`, columns.map(c => c.label).join(', '));
+    
+    const result = generateRealisticMockData(agent, columns, workflowContext, stepIndex);
+    console.log(`   ✅ Generated ${result.rows.length} rows for "${result.tableTitle}"`);
+    
+    return result;
+  } catch (error) {
+    console.error('Failed to generate mock data:', error);
+    
+    //Fallback data
+    return {
+      metrics: [
+        { label: 'Total Items', value: '120', subtext: 'processed', color: 'blue' },
+        { label: 'Completed', value: '95%', subtext: 'success rate', color: 'green' },
+      ],
+      tableTitle: 'Dashboard',
+      tableSubtitle: agent.description,
+      columns: [{ key: 'id', label: 'ID' }, { key: 'name', label: 'Name' }, { key: 'status', label: 'Status' }],
+      rows: [{ id: '001', name: generateRandomName(), status: 'Active', _statusColor: 'green' }],
+      uiType: 'table',
+      activityFeed: [],
+      processingSteps: agent.actions.map((a, i) => ({ label: a, detail: i < agent.actions.length - 1 ? 'Done' : 'Processing...', done: i < agent.actions.length - 1 })),
+    };
+  }
 }
 
 // ─── Status Badge Helper ────────────────────────────────────────────────────
@@ -362,23 +521,22 @@ function StatusBadge({ status, color }: { status: string; color: string }) {
   );
 }
 
-// ─── Activity Log Mock Data ──────────────────────────────────────────────
-function generateActivityLog(agent: Agent) {
-  const actions = agent.actions.length > 0 ? agent.actions : ['Processing item', 'Analyzing data', 'Generating output'];
-  const logColors = ['green', 'blue', 'purple', 'amber'];
-  return [
-    { id: 'LOG-001', action: actions[0] || 'Task completed', time: '2 min ago', user: 'AI Agent', status: 'complete', confidence: randBetween(94, 99) },
-    { id: 'LOG-002', action: actions[1] || 'Processing item', time: '8 min ago', user: 'AI Agent', status: 'complete', confidence: randBetween(90, 98) },
-    { id: 'LOG-003', action: `Flagged for review: ${actions[0] || 'item'}`, time: '15 min ago', user: pickRandom(personNames), status: 'flagged', confidence: randBetween(60, 80) },
-    { id: 'LOG-004', action: actions[Math.min(2, actions.length - 1)] || 'Data sync', time: '22 min ago', user: 'AI Agent', status: 'complete', confidence: randBetween(95, 99) },
-    { id: 'LOG-005', action: 'Manual override applied', time: '35 min ago', user: pickRandom(personNames), status: 'override', confidence: 0 },
-    { id: 'LOG-006', action: `Batch ${actions[0] || 'processing'} completed`, time: '1 hr ago', user: 'AI Agent', status: 'complete', confidence: randBetween(96, 99) },
-    { id: 'LOG-007', action: 'Escalated to senior reviewer', time: '1.5 hrs ago', user: pickRandom(personNames), status: 'escalated', confidence: randBetween(40, 65) },
-  ];
-}
-
 // ─── Agent Dashboard ────────────────────────────────────────────────────────
-function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
+function AgentDashboard({ 
+  agent, 
+  index, 
+  workflowContext, 
+  allAgents, 
+  previousAgentData,
+  onDataGenerated 
+}: { 
+  agent: Agent; 
+  index: number; 
+  workflowContext: string; 
+  allAgents: Agent[];
+  previousAgentData?: AgentMockData;
+  onDataGenerated: (agentId: string, data: AgentMockData) => void;
+}) {
   const [selectedRow, setSelectedRow] = useState<MockRow | null>(null);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -387,10 +545,65 @@ function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
   const [activeTab, setActiveTab] = useState<'data' | 'activity'>('data');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [mockData, setMockData] = useState<AgentMockData | null>(null);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [approvalStates, setApprovalStates] = useState<Record<string, 'approved' | 'declined' | null>>({});
+
+  // Check if this agent requires human approval
+  const requiresApproval = useMemo(() => {
+    const actions = agent.actions.join(' ').toLowerCase();
+    return actions.includes('approve') || actions.includes('review') || 
+           actions.includes('confirm') || actions.includes('authorize') ||
+           actions.includes('verify') && (actions.includes('manual') || actions.includes('human'));
+  }, [agent.actions]);
+
+  const handleApproval = (rowId: string, action: 'approved' | 'declined') => {
+    setApprovalStates(prev => ({ ...prev, [rowId]: action }));
+    // Simulate processing
+    setTimeout(() => {
+      // In a real app, this would trigger the next workflow step
+      console.log(`${action} item ${rowId}`);
+    }, 500);
+  };
+
+  // Load AI-generated mock data
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoadingData(true);
+    setMockData(null); // Clear old data
+    
+    const previousAgent = index > 0 ? allAgents[index - 1] : undefined;
+    
+    // For steps after the first, wait until we have previous agent data
+    if (index > 0 && !previousAgentData) {
+      // Still waiting for previous agent data to be generated
+      // The component will re-render when previousAgentData becomes available
+      console.log(`⏳ Step ${index + 1} waiting for previous step data...`);
+      return;
+    }
+    
+    console.log(`🚀 Starting data generation for step ${index + 1}: ${agent.name}`);
+    
+    generateAgentMockDataAsync(agent, workflowContext, index, allAgents.length, previousAgent, previousAgentData)
+      .then(data => {
+        if (!cancelled) {
+          console.log(`✅ Data generated for step ${index + 1}: ${data.tableTitle}`);
+          setMockData(data);
+          setIsLoadingData(false);
+          onDataGenerated(agent.id, data);
+        }
+      })
+      .catch(err => {
+        console.error(`❌ Failed to generate data for step ${index + 1}:`, err);
+        if (!cancelled) {
+          setIsLoadingData(false);
+        }
+      });
+    
+    return () => { cancelled = true; };
+  }, [agent.id, workflowContext, index, previousAgentData]);
 
   const color = getColor(agent.color);
-  const mockData = useMemo(() => generateAgentMockData(agent, index), [agent.id, index]);
-  const activityLog = useMemo(() => generateActivityLog(agent), [agent.id]);
 
   const metricColorMap: Record<string, string> = {
     blue: 'bg-blue-100 text-blue-600',
@@ -416,16 +629,18 @@ function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
 
   // Compute status counts for filter badges
   const statusCounts = useMemo(() => {
+    if (!mockData) return {};
     const counts: Record<string, number> = {};
     mockData.rows.forEach(r => {
       const s = String(r._statusColor || 'blue');
       counts[s] = (counts[s] || 0) + 1;
     });
     return counts;
-  }, [mockData.rows]);
+  }, [mockData]);
 
   // Filter rows by search + status
   const filteredRows = useMemo(() => {
+    if (!mockData) return [];
     return mockData.rows.filter(row => {
       if (statusFilter && String(row._statusColor) !== statusFilter) return false;
       if (searchQuery) {
@@ -434,25 +649,47 @@ function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
       }
       return true;
     });
-  }, [mockData.rows, mockData.columns, searchQuery, statusFilter]);
+  }, [mockData, searchQuery, statusFilter]);
+
+  // Show loading state while data is being generated
+  if (isLoadingData || !mockData) {
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        <div className={`bg-gradient-to-r ${color.gradientFrom} ${color.gradientTo} rounded-xl p-6 border ${color.border}`}>
+          <div className="flex items-center justify-center py-12">
+            <div className="flex items-center space-x-3 text-gray-700">
+              <div className="w-5 h-5 border-2 border-gray-700 border-t-transparent rounded-full animate-spin" />
+              <span className="font-medium">Loading screen...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Agent Banner */}
+      {/* What This Step Does - Simple Explanation */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start space-x-3">
+          <div className="bg-blue-100 p-2 rounded-lg">
+            <Activity className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-blue-900 mb-1">What this step does:</h4>
+            <p className="text-sm text-blue-800">{agent.description}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Screen Header */}
       <div className={`bg-gradient-to-r ${color.gradientFrom} ${color.gradientTo} rounded-xl p-6 border ${color.border}`}>
         <div className="flex items-start space-x-4">
-          <div className={`${color.bg} p-3 rounded-xl shadow-lg`}>
-            <Brain className="w-7 h-7 text-white" />
-          </div>
           <div className="flex-1">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-bold text-gray-900">Agent {index + 1}: {agent.name}</h3>
-              <span className="flex items-center space-x-2">
-                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-sm font-medium text-gray-700">Active</span>
-              </span>
-            </div>
-            <p className="text-sm text-gray-700 mb-4">{agent.description}</p>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{mockData.tableTitle}</h3>
+            {mockData.tableSubtitle && (
+              <p className="text-sm text-gray-700 mb-4">{mockData.tableSubtitle}</p>
+            )}
             <div className="grid grid-cols-3 gap-3">
               {mockData.metrics.slice(0, 3).map((m, i) => (
                 <div key={i} className={`bg-white/80 backdrop-blur rounded-lg p-3 border ${color.border}`}>
@@ -509,7 +746,7 @@ function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              🕐 Activity Log
+              🕐 Activity Feed
             </button>
           </div>
         </div>
@@ -642,13 +879,52 @@ function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
                         </td>
                       ))}
                       <td className="px-5 py-4">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setSelectedRow(row); }}
-                          className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1 transition"
-                        >
-                          <Eye className="w-4 h-4" />
-                          <span>View Details →</span>
-                        </button>
+                        {requiresApproval ? (
+                          <div className="flex items-center space-x-2">
+                            {approvalStates[row.id as string] === 'approved' ? (
+                              <span className="px-3 py-1.5 bg-green-100 text-green-700 text-xs font-medium rounded-lg flex items-center space-x-1">
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                <span>Approved</span>
+                              </span>
+                            ) : approvalStates[row.id as string] === 'declined' ? (
+                              <span className="px-3 py-1.5 bg-red-100 text-red-700 text-xs font-medium rounded-lg flex items-center space-x-1">
+                                <XCircle className="w-3.5 h-3.5" />
+                                <span>Declined</span>
+                              </span>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleApproval(row.id as string, 'approved'); }}
+                                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg flex items-center space-x-1 transition"
+                                >
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleApproval(row.id as string, 'declined'); }}
+                                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg flex items-center space-x-1 transition"
+                                >
+                                  <XCircle className="w-3.5 h-3.5" />
+                                  <span>Decline</span>
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setSelectedRow(row); }}
+                              className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1 transition"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSelectedRow(row); }}
+                            className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1 transition"
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span>View Details →</span>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -658,11 +934,11 @@ function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
           </div>
         )}
 
-        {/* Activity Log Tab */}
+        {/* Activity Feed Tab */}
         {activeTab === 'activity' && (
           <div>
             <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-              <span className="text-sm text-gray-600">Showing recent activity for {agent.name}</span>
+              <span className="text-sm text-gray-600">Recent activity and updates</span>
               <button
                 onClick={() => handleAction('refresh')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center space-x-1.5 transition"
@@ -672,61 +948,55 @@ function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
               </button>
             </div>
             <div className="divide-y divide-gray-200">
-              {activityLog.map((log) => (
-                <div key={log.id} className="p-5 hover:bg-gray-50 transition-colors">
+              {(mockData.activityFeed || []).map((activity) => (
+                <div key={activity.id} className="p-5 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <div className={`p-3 rounded-lg ${
-                        log.status === 'complete' ? 'bg-green-100' :
-                        log.status === 'flagged' ? 'bg-amber-100' :
-                        log.status === 'escalated' ? 'bg-red-100' :
-                        'bg-purple-100'
+                        activity.type === 'success' ? 'bg-green-100' :
+                        activity.type === 'warning' ? 'bg-amber-100' :
+                        activity.type === 'error' ? 'bg-red-100' :
+                        'bg-blue-100'
                       }`}>
-                        {log.status === 'complete' ? <CheckCircle className="w-5 h-5 text-green-600" /> :
-                         log.status === 'flagged' ? <Bell className="w-5 h-5 text-amber-600" /> :
-                         log.status === 'escalated' ? <Shield className="w-5 h-5 text-red-600" /> :
-                         <Zap className="w-5 h-5 text-purple-600" />}
+                        {activity.type === 'success' ? <CheckCircle className="w-5 h-5 text-green-600" /> :
+                         activity.type === 'warning' ? <Bell className="w-5 h-5 text-amber-600" /> :
+                         activity.type === 'error' ? <Shield className="w-5 h-5 text-red-600" /> :
+                         <Zap className="w-5 h-5 text-blue-600" />}
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
                           <span className={`px-2 py-0.5 text-xs font-medium rounded ${
-                            log.status === 'complete' ? 'bg-green-100 text-green-800' :
-                            log.status === 'flagged' ? 'bg-amber-100 text-amber-800' :
-                            log.status === 'escalated' ? 'bg-red-100 text-red-800' :
-                            'bg-purple-100 text-purple-800'
+                            activity.type === 'success' ? 'bg-green-100 text-green-800' :
+                            activity.type === 'warning' ? 'bg-amber-100 text-amber-800' :
+                            activity.type === 'error' ? 'bg-red-100 text-red-800' :
+                            'bg-blue-100 text-blue-800'
                           }`}>
-                            {log.status.toUpperCase()}
+                            {activity.type.toUpperCase()}
                           </span>
-                          <span className="text-xs text-gray-500">{log.time}</span>
+                          <span className="text-xs text-gray-500">{activity.time}</span>
                         </div>
-                        <p className="font-semibold text-gray-900 text-sm">{log.action}</p>
-                        <p className="text-xs text-gray-500">By: {log.user}</p>
+                        <p className="font-medium text-gray-900 text-sm">{activity.message}</p>
+                        {activity.user && <p className="text-xs text-gray-500 mt-1">By: {activity.user}</p>}
+                        {activity.metadata && Object.keys(activity.metadata).length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {Object.entries(activity.metadata).slice(0, 3).map(([key, val]) => (
+                              <span key={key} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                {key}: {String(val)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      {log.confidence > 0 && (
-                        <div className="text-right">
-                          <p className="text-xs text-gray-500">AI Confidence</p>
-                          <p className={`text-lg font-bold ${log.confidence >= 90 ? 'text-green-600' : log.confidence >= 70 ? 'text-amber-600' : 'text-red-600'}`}>
-                            {log.confidence}%
-                          </p>
-                        </div>
-                      )}
-                      <button className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                        log.status === 'complete' ? 'bg-green-600 text-white hover:bg-green-700' :
-                        log.status === 'flagged' ? 'bg-amber-600 text-white hover:bg-amber-700' :
-                        log.status === 'escalated' ? 'bg-red-100 text-red-700 hover:bg-red-200' :
-                        'bg-blue-600 text-white hover:bg-blue-700'
-                      }`}>
-                        {log.status === 'complete' ? 'Review' :
-                         log.status === 'flagged' ? 'Resolve' :
-                         log.status === 'escalated' ? 'View' :
-                         'Details'}
-                      </button>
                     </div>
                   </div>
                 </div>
               ))}
+              {(!mockData.activityFeed || mockData.activityFeed.length === 0) && (
+                <div className="p-12 text-center text-gray-400">
+                  <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">No recent activity</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -736,7 +1006,7 @@ function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
       <div className="flex space-x-3">
         <button
           onClick={() => {
-            setReminderMessage(`Automated reminder regarding pending items in the ${agent.name} queue.\n\nPlease review and action outstanding items at your earliest convenience.\n\nItems requiring attention: ${mockData.rows.filter(r => String(r._statusColor) === 'amber').length}\n\nThank you.`);
+            setReminderMessage(`Reminder: You have pending items requiring attention.\n\nPlease review and take action on outstanding items at your earliest convenience.\n\nItems requiring attention: ${mockData.rows.filter(r => String(r._statusColor) === 'amber').length}\n\nThank you.`);
             setShowReminderModal(true);
           }}
           className="flex-1 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 flex items-center justify-center space-x-2 transition shadow-sm"
@@ -813,7 +1083,7 @@ function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
                   <div className="flex items-start space-x-3">
                     <div className="bg-green-100 p-1 rounded-full mt-0.5"><CheckCircle className="w-3.5 h-3.5 text-green-600" /></div>
                     <div>
-                      <p className="text-xs font-bold text-gray-900">Processed by {agent.name}</p>
+                      <p className="text-xs font-bold text-gray-900">Processing Complete</p>
                       <p className="text-xs text-gray-500">Today, {randBetween(10, 11)}:{String(randBetween(0, 59)).padStart(2, '0')} AM</p>
                     </div>
                   </div>
@@ -821,7 +1091,7 @@ function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
                     <div className="bg-blue-100 p-1 rounded-full mt-0.5"><Activity className="w-3.5 h-3.5 text-blue-600 animate-pulse" /></div>
                     <div>
                       <p className="text-xs font-bold text-gray-900">Awaiting Next Step</p>
-                      <p className="text-xs text-gray-500">In queue for downstream processing</p>
+                      <p className="text-xs text-gray-500">Pending further action</p>
                     </div>
                   </div>
                 </div>
@@ -894,7 +1164,7 @@ function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50">
               <div>
                 <h2 className="text-base font-bold text-gray-900">Send Reminders</h2>
-                <p className="text-xs text-gray-500 mt-0.5">{agent.name} — Pending items notification</p>
+                <p className="text-xs text-gray-500 mt-0.5">Pending items notification</p>
               </div>
               <button onClick={() => setShowReminderModal(false)} className="text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg p-1 transition">
                 <XCircle className="w-5 h-5" />
@@ -946,9 +1216,32 @@ function AgentDashboard({ agent, index }: { agent: Agent; index: number }) {
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────────
-export function WorkflowDemoView({ workflow, onBack }: WorkflowDemoViewProps) {
+
+
+export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDemoViewProps) {
   const [activeAgentIndex, setActiveAgentIndex] = useState(0);
+  const [agentDataCache, setAgentDataCache] = useState<Map<string, AgentMockData>>(new Map());
   const activeAgent = workflow.agents[activeAgentIndex];
+
+  // Clear cache when workflow changes (new workflow created)
+  useEffect(() => {
+    console.log('🔄 New workflow detected - clearing data cache');
+    setAgentDataCache(new Map());
+    setActiveAgentIndex(0);
+  }, [workflow.id, originalTasks]);
+
+  // Update cache when agent data is generated
+  const handleAgentDataGenerated = useCallback((agentId: string, data: AgentMockData) => {
+    console.log(`💾 Caching data for agent: ${agentId}`);
+    setAgentDataCache(prev => new Map(prev).set(agentId, data));
+  }, []);
+
+  // Get previous agent's data for continuity
+  const getPreviousAgentData = useCallback((currentIndex: number): AgentMockData | undefined => {
+    if (currentIndex === 0) return undefined;
+    const previousAgent = workflow.agents[currentIndex - 1];
+    return agentDataCache.get(previousAgent.id);
+  }, [agentDataCache, workflow.agents]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -965,16 +1258,12 @@ export function WorkflowDemoView({ workflow, onBack }: WorkflowDemoViewProps) {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Agentc Workflow Architect</h1>
-                <p className="text-sm text-gray-500">{workflow.agents.length}-Agent Workflow • Live Preview</p>
+                <p className="text-sm text-gray-500">{workflow.agents.length}-Step Workflow • Live Preview</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200">
-                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-sm font-medium text-green-700">All Agents Online</span>
-              </div>
               <span className="px-3 py-1.5 text-xs font-bold bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 rounded-full border border-amber-200">
-                INTERACTIVE PREVIEW
+                PREVIEW MODE
               </span>
             </div>
           </div>
@@ -1021,7 +1310,15 @@ export function WorkflowDemoView({ workflow, onBack }: WorkflowDemoViewProps) {
       {/* Agent Dashboard Content */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         {activeAgent && (
-          <AgentDashboard key={activeAgent.id} agent={activeAgent} index={activeAgentIndex} />
+          <AgentDashboard 
+            key={activeAgent.id} 
+            agent={activeAgent} 
+            index={activeAgentIndex} 
+            workflowContext={originalTasks}
+            allAgents={workflow.agents}
+            previousAgentData={getPreviousAgentData(activeAgentIndex)}
+            onDataGenerated={handleAgentDataGenerated}
+          />
         )}
       </div>
 
