@@ -166,10 +166,6 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
         </div>
       </div>
 
-      {/* Credit */}
-      <div className="fixed bottom-4 right-4 text-sm text-gray-400">
-        Built by <span className="font-medium text-gray-500">James Helou</span>
-      </div>
     </div>
   );
 }
