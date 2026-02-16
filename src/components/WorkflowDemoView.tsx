@@ -181,49 +181,47 @@ function generateRealisticMockData(
     { key: 'item_id', label: idLabel },
   ];
 
-  // Derive 3-4 middle columns from the agent's actions
-  // Take the first 3 unique "meaningful" actions and create columns for them
+  // Derive 3-4 middle columns from the agent's actions using domain-agnostic patterns
   const actionColumns: { key: string; label: string; values: string[] }[] = [];
 
   for (const action of agent.actions.slice(0, 4)) {
     const lower = action.toLowerCase();
 
-    // Skip generic words, try to extract the meaningful noun/verb
     if (lower.includes('reconcil') || lower.includes('match') || lower.includes('compare')) {
       actionColumns.push({ key: 'match_result', label: 'Match Result', values: ['Matched', 'Partial Match', 'Unmatched', 'Auto-Reconciled', 'Exception'] });
-    } else if (lower.includes('update') && (lower.includes('system') || lower.includes('front office') || lower.includes('record'))) {
-      const system = lower.includes('front office') ? 'Front Office' : lower.includes('gl') ? 'GL' : lower.includes('book') ? 'Books & Records' : 'System';
-      actionColumns.push({ key: 'target_system', label: 'Target System', values: [system, 'PMS', 'OMS', 'Data Warehouse', 'Client Portal', 'Core Banking'] });
-      actionColumns.push({ key: 'update_status', label: 'Update Status', values: ['Synced', 'Pending Sync', 'Sync Error', 'Queued', 'Verified'] });
-    } else if (lower.includes('transfer') || lower.includes('move') || lower.includes('cash')) {
-      actionColumns.push({ key: 'amount', label: 'Amount', values: ['$1,250,000', '$842,750', '$3,100,000', '$475,320', '$2,680,000', '$156,800', '$5,420,100'] });
-      actionColumns.push({ key: 'destination', label: 'Destination', values: ['Pooled Bank Acct', 'Client Trust', 'Operating Account', 'Settlement Acct', 'Custodian', 'Wire Transfer'] });
-    } else if (lower.includes('setup') || lower.includes('open') || lower.includes('create')) {
-      const type = lower.includes('sub account') || lower.includes('sub-account') ? 'Sub-Account' :
-                   lower.includes('managed') ? 'Managed Account' :
-                   lower.includes('brokerage') ? 'Brokerage' :
-                   lower.includes('fiduciary') ? 'Fiduciary' : 'Account';
-      actionColumns.push({ key: 'account_type', label: 'Account Type', values: [type, 'Brokerage/Specialty', 'Specialty/Institutional', 'Managed Brokerage', 'Fiduciary Trust', 'Advisory'] });
-      actionColumns.push({ key: 'client_name', label: 'Client', values: firstNames.slice(0, 7).map((f, i) => `${f} ${lastNames[i]}`) });
+    } else if (lower.includes('update') || lower.includes('sync') || lower.includes('write')) {
+      actionColumns.push({ key: 'target', label: 'Target', values: agent.integrations.length > 0 ? agent.integrations : ['System A', 'System B', 'Database', 'External API', 'Data Store'] });
+      actionColumns.push({ key: 'update_status', label: 'Update Status', values: ['Synced', 'Pending', 'Error', 'Queued', 'Verified'] });
+    } else if (lower.includes('transfer') || lower.includes('move') || lower.includes('send') || lower.includes('deliver')) {
+      actionColumns.push({ key: 'destination', label: 'Destination', values: agent.integrations.length > 0 ? agent.integrations : ['Endpoint A', 'Endpoint B', 'Queue', 'External', 'Archive', 'Output'] });
+      actionColumns.push({ key: 'size', label: 'Size/Count', values: ['12 items', '45 records', '8 entries', '120 rows', '3 batches', '67 docs'] });
+    } else if (lower.includes('setup') || lower.includes('open') || lower.includes('create') || lower.includes('register') || lower.includes('provision')) {
+      // Extract a type name from the action text instead of hardcoding
+      const words = action.replace(/^(setup|open|create|register|provision)\s*/i, '').trim();
+      const typeLabel = words.length > 2 ? words.split(/\s+/).slice(0, 2).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Type';
+      actionColumns.push({ key: 'item_type', label: typeLabel || 'Type', values: ['Standard', 'Premium', 'Basic', 'Custom', 'Enterprise', 'Default'] });
+      actionColumns.push({ key: 'owner', label: 'Owner', values: firstNames.slice(0, 7).map((f, i) => `${f} ${lastNames[i]}`) });
     } else if (lower.includes('advise') || lower.includes('notify') || lower.includes('inform') || lower.includes('alert')) {
       actionColumns.push({ key: 'recipient', label: 'Recipient', values: firstNames.slice(0, 7).map((f, i) => `${f} ${lastNames[i]}`) });
-      actionColumns.push({ key: 'notification_type', label: 'Notification', values: ['Cash Available', 'Transfer Complete', 'Action Required', 'Approval Needed', 'Status Update', 'Confirmation'] });
-    } else if (lower.includes('implement') || lower.includes('execute') || lower.includes('proposal')) {
-      actionColumns.push({ key: 'proposal', label: 'Proposal/Order', values: ['Growth Rebalance', 'Income Allocation', 'Tax Harvest', 'New Investment', 'Sector Rotation', 'Risk Reduction'] });
-      actionColumns.push({ key: 'value', label: 'Value', values: ['$2.5M', '$1.8M', '$750K', '$3.2M', '$4.1M', '$920K', '$5.6M'] });
-    } else if (lower.includes('report') || lower.includes('perform') || lower.includes('generate')) {
-      actionColumns.push({ key: 'report_type', label: 'Report', values: ['Performance', 'Holdings', 'Cash Flow', 'Tax Summary', 'Fee Report', 'Risk Analysis', 'Compliance'] });
-      actionColumns.push({ key: 'period', label: 'Period', values: ['Jan 2026', 'Q4 2025', 'FY 2025', 'Feb 2026', 'YTD 2026', 'Monthly', 'Quarterly'] });
-    } else if (lower.includes('refer') || lower.includes('escalat') || lower.includes('missing')) {
-      actionColumns.push({ key: 'referred_to', label: 'Referred To', values: ['Front Office', 'Banker', 'Compliance', 'Operations Manager', 'Senior Advisor', 'Legal'] });
-      actionColumns.push({ key: 'reason', label: 'Reason', values: ['Missing Info', 'Needs Approval', 'Exception', 'Manual Review', 'Documentation Gap', 'Policy Check'] });
-    } else if (lower.includes('enter') || lower.includes('order') || lower.includes('trade')) {
-      actionColumns.push({ key: 'order_type', label: 'Order Type', values: ['Buy', 'Sell', 'Rebalance', 'Transfer In', 'Transfer Out', 'Exchange'] });
-      actionColumns.push({ key: 'security', label: 'Security', values: ['AAPL', 'MSFT', 'GOOGL', 'US Treasury 10Y', 'SPY ETF', 'BND ETF', 'VTI ETF'] });
-      actionColumns.push({ key: 'quantity', label: 'Quantity', values: ['500 shares', '1,200 shares', '300 units', '750 shares', '$2M par', '2,500 shares', '800 shares'] });
-    } else if (lower.includes('validate') || lower.includes('verify') || lower.includes('check')) {
+      actionColumns.push({ key: 'notification_type', label: 'Notification', values: ['Action Required', 'Complete', 'Approval Needed', 'Status Update', 'Confirmation', 'Alert'] });
+    } else if (lower.includes('implement') || lower.includes('execute') || lower.includes('run') || lower.includes('process')) {
+      const taskWord = action.split(/\s+/).find(w => w.length > 4 && !['implement', 'execute'].includes(w.toLowerCase())) || 'Task';
+      actionColumns.push({ key: 'task_name', label: taskWord.charAt(0).toUpperCase() + taskWord.slice(1), values: ['Batch A', 'Batch B', 'Priority', 'Standard', 'Expedited', 'Routine'] });
+    } else if (lower.includes('report') || lower.includes('generate') || lower.includes('summarize') || lower.includes('compile')) {
+      actionColumns.push({ key: 'output_name', label: 'Output', values: ['Summary Report', 'Detail Report', 'Analysis', 'Dashboard', 'Export', 'Digest'] });
+      actionColumns.push({ key: 'format', label: 'Format', values: ['PDF', 'CSV', 'JSON', 'HTML', 'Excel', 'API Response'] });
+    } else if (lower.includes('refer') || lower.includes('escalat') || lower.includes('flag')) {
+      actionColumns.push({ key: 'referred_to', label: 'Escalated To', values: ['Team Lead', 'Manager', 'Specialist', 'Senior Reviewer', 'Admin', 'Supervisor'] });
+      actionColumns.push({ key: 'reason', label: 'Reason', values: ['Missing Info', 'Needs Approval', 'Exception', 'Manual Review', 'Policy Check', 'Threshold Exceeded'] });
+    } else if (lower.includes('validate') || lower.includes('verify') || lower.includes('check') || lower.includes('inspect')) {
       actionColumns.push({ key: 'check_result', label: 'Result', values: ['Passed', 'Failed', 'Warning', 'Passed', 'Passed', 'Needs Review'] });
-      actionColumns.push({ key: 'details', label: 'Details', values: ['All fields valid', '2 discrepancies', 'Amount mismatch', 'Clean', 'Verified', 'Missing signature'] });
+      actionColumns.push({ key: 'details', label: 'Details', values: ['All fields valid', '2 issues found', 'Mismatch detected', 'Clean', 'Verified', 'Incomplete data'] });
+    } else if (lower.includes('extract') || lower.includes('parse') || lower.includes('read') || lower.includes('ingest')) {
+      actionColumns.push({ key: 'source', label: 'Source', values: agent.integrations.length > 0 ? agent.integrations : ['File Upload', 'API', 'Email', 'Database', 'Form', 'Scanner'] });
+      actionColumns.push({ key: 'records_found', label: 'Records', values: ['24', '108', '56', '12', '89', '3', '45'] });
+    } else if (lower.includes('classify') || lower.includes('categorize') || lower.includes('label') || lower.includes('tag')) {
+      actionColumns.push({ key: 'category', label: 'Category', values: ['Category A', 'Category B', 'Category C', 'Uncategorized', 'Mixed', 'Other'] });
+      actionColumns.push({ key: 'confidence', label: 'Confidence', values: ['98%', '87%', '95%', '72%', '91%', '64%'] });
     } else {
       // For any other action, create a column showing the action as a task
       const shortLabel = action.length > 25 ? action.substring(0, 22) + '...' : action;
@@ -329,273 +327,16 @@ function generateRealisticMockData(
   };
 }
 
-// ─── Domain detection for context-aware fallback ─────────────────────────
-
-type DomainProfile = {
-  domain: string;
-  idLabel: string;
-  columns: { key: string; label: string }[];
-  sampleIds: string[];
-  sampleValues: Record<string, string[]>;
-  metrics: { label: string; value: string; subtext: string; color: string }[];
-  activityTemplates: string[];
-  screenTitle: string;
-  screenSubtitle: string;
-};
-
-const DOMAIN_PROFILES: DomainProfile[] = [
-  {
-    domain: 'finance',
-    idLabel: 'Transaction ID',
-    columns: [
-      { key: 'item_id', label: 'Transaction ID' },
-      { key: 'account', label: 'Account' },
-      { key: 'amount', label: 'Amount' },
-      { key: 'counterparty', label: 'Counterparty' },
-      { key: 'date', label: 'Date' },
-      { key: 'status', label: 'Status' },
-    ],
-    sampleIds: ['TXN-001', 'TXN-002', 'TXN-003', 'TXN-004', 'TXN-005', 'TXN-006', 'TXN-007'],
-    sampleValues: {
-      account: ['GL-1001 Operating', 'GL-2040 Payables', 'GL-3010 Revenue', 'GL-1500 Cash Pool', 'GL-4020 Securities', 'GL-2060 Liabilities', 'GL-5010 Equity'],
-      amount: ['$1,250,000.00', '$842,750.50', '$3,100,000.00', '$475,320.75', '$2,680,000.00', '$156,800.25', '$5,420,100.00'],
-      counterparty: ['Goldman Sachs', 'JP Morgan', 'State Street', 'BNY Mellon', 'Northern Trust', 'Charles Schwab', 'Fidelity'],
-      date: ['Feb 12, 2026', 'Feb 11, 2026', 'Feb 10, 2026', 'Feb 09, 2026', 'Feb 08, 2026', 'Feb 07, 2026', 'Feb 12, 2026'],
-    },
-    metrics: [
-      { label: 'Total Volume', value: '$14.2M', subtext: 'today', color: 'blue' },
-      { label: 'Reconciled', value: '94%', subtext: 'matched', color: 'green' },
-      { label: 'Exceptions', value: '12', subtext: 'pending review', color: 'amber' },
-      { label: 'Failed', value: '3', subtext: 'unmatched', color: 'red' },
-    ],
-    activityTemplates: [
-      'Reconciled {id} — {account} matched with {counterparty}',
-      'Exception flagged on {id}: amount mismatch of {amount}',
-      'Auto-matched {id} to {counterparty} ledger entry',
-      'Cash transfer {id} confirmed for {amount}',
-      'GL posting completed for {id} — {account}',
-    ],
-    screenTitle: 'Financial Operations Dashboard',
-    screenSubtitle: 'Real-time transaction processing and reconciliation',
-  },
-  {
-    domain: 'investment',
-    idLabel: 'Order ID',
-    columns: [
-      { key: 'item_id', label: 'Order ID' },
-      { key: 'client', label: 'Client' },
-      { key: 'asset_class', label: 'Asset Class' },
-      { key: 'amount', label: 'Amount' },
-      { key: 'portfolio', label: 'Portfolio' },
-      { key: 'status', label: 'Status' },
-    ],
-    sampleIds: ['ORD-001', 'ORD-002', 'ORD-003', 'ORD-004', 'ORD-005', 'ORD-006', 'ORD-007'],
-    sampleValues: {
-      client: ['Hargrove Family Trust', 'Meridian Pension Fund', 'Atlas Foundation', 'Chen Family Office', 'Vanguard Endowment', 'Sterling Partners', 'Pacific Holdings'],
-      asset_class: ['US Equities', 'Fixed Income', 'Real Estate', 'Private Equity', 'Commodities', 'Int\'l Equities', 'Alternatives'],
-      amount: ['$2,500,000', '$5,100,000', '$750,000', '$3,200,000', '$1,800,000', '$4,600,000', '$920,000'],
-      portfolio: ['Growth Aggressive', 'Conservative Income', 'Balanced Moderate', 'Tax-Efficient', 'ESG Focus', 'High Yield', 'Capital Preservation'],
-    },
-    metrics: [
-      { label: 'AUM Managed', value: '$2.4B', subtext: 'total', color: 'blue' },
-      { label: 'Orders Executed', value: '47', subtext: 'today', color: 'green' },
-      { label: 'Pending Allocation', value: '8', subtext: 'awaiting', color: 'amber' },
-      { label: 'Proposals', value: '12', subtext: 'in review', color: 'purple' },
-    ],
-    activityTemplates: [
-      'Investment proposal for {client} approved — {asset_class} allocation',
-      'Order {id} executed: {amount} into {portfolio}',
-      'Rebalance triggered for {client} — {asset_class} drift detected',
-      'Cash available for {client}: {amount} ready for deployment',
-      'Portfolio review completed for {client} — {portfolio}',
-    ],
-    screenTitle: 'Investment Management Dashboard',
-    screenSubtitle: 'Portfolio allocation, orders, and client management',
-  },
-  {
-    domain: 'account',
-    idLabel: 'Account ID',
-    columns: [
-      { key: 'item_id', label: 'Account ID' },
-      { key: 'client_name', label: 'Client Name' },
-      { key: 'account_type', label: 'Account Type' },
-      { key: 'custodian', label: 'Custodian' },
-      { key: 'opened_date', label: 'Opened' },
-      { key: 'status', label: 'Status' },
-    ],
-    sampleIds: ['ACCT-001', 'ACCT-002', 'ACCT-003', 'ACCT-004', 'ACCT-005', 'ACCT-006', 'ACCT-007'],
-    sampleValues: {
-      client_name: ['William Hargrove', 'Sophia Chen', 'Marcus Williams', 'Elena Petrov', 'James O\'Brien', 'Amira Hassan', 'Carlos Mendez'],
-      account_type: ['Managed Brokerage', 'Sub-Account Fiduciary', 'Specialty/Institutional', 'Brokerage/Specialty', 'Trust Account', 'Retirement IRA', 'Advisory Account'],
-      custodian: ['Schwab', 'Fidelity', 'Pershing', 'TD Ameritrade', 'BNY Mellon', 'State Street', 'Northern Trust'],
-      opened_date: ['Feb 12, 2026', 'Feb 11, 2026', 'Feb 10, 2026', 'Feb 08, 2026', 'Feb 07, 2026', 'Feb 05, 2026', 'Feb 03, 2026'],
-    },
-    metrics: [
-      { label: 'Accounts Opened', value: '23', subtext: 'this week', color: 'blue' },
-      { label: 'Setup Complete', value: '18', subtext: '78% done', color: 'green' },
-      { label: 'Pending Info', value: '5', subtext: 'missing docs', color: 'amber' },
-      { label: 'Escalated', value: '2', subtext: 'to front office', color: 'red' },
-    ],
-    activityTemplates: [
-      'Account {id} opened for {client_name} — {account_type}',
-      'Setup complete: {id} at {custodian} for {client_name}',
-      'Pending documentation for {id} — referred to front office',
-      'Sub-account created: {account_type} under {client_name}',
-      'Custodian transfer initiated for {id} to {custodian}',
-    ],
-    screenTitle: 'Account Setup Dashboard',
-    screenSubtitle: 'New account onboarding and configuration',
-  },
-  {
-    domain: 'compliance',
-    idLabel: 'Case ID',
-    columns: [
-      { key: 'item_id', label: 'Case ID' },
-      { key: 'entity', label: 'Entity' },
-      { key: 'check_type', label: 'Check Type' },
-      { key: 'risk_score', label: 'Risk Score' },
-      { key: 'assigned_to', label: 'Assigned To' },
-      { key: 'status', label: 'Status' },
-    ],
-    sampleIds: ['CMP-001', 'CMP-002', 'CMP-003', 'CMP-004', 'CMP-005', 'CMP-006', 'CMP-007'],
-    sampleValues: {
-      entity: ['Acme Holdings', 'Vertex Capital', 'Pinnacle Trust', 'Horizon Fund', 'Atlas Insurance', 'Summit Partners', 'Zenith Corp'],
-      check_type: ['KYC Review', 'AML Screening', 'Sanctions Check', 'Regulatory Filing', 'Risk Assessment', 'Audit Trail', 'Policy Review'],
-      risk_score: ['Low (12)', 'Medium (45)', 'Low (8)', 'High (78)', 'Medium (52)', 'Low (15)', 'High (85)'],
-      assigned_to: ['Emily Watson', 'Michael Chen', 'Sarah Lopez', 'David Kim', 'Rachel Adams', 'James Park', 'Lisa Zhang'],
-    },
-    metrics: [
-      { label: 'Cases Open', value: '34', subtext: 'active', color: 'blue' },
-      { label: 'Cleared', value: '28', subtext: 'this week', color: 'green' },
-      { label: 'High Risk', value: '4', subtext: 'escalated', color: 'red' },
-      { label: 'Pending Review', value: '6', subtext: 'in queue', color: 'amber' },
-    ],
-    activityTemplates: [
-      'KYC review completed for {entity} — risk score: {risk_score}',
-      'AML screening cleared: {id} — {entity}',
-      'High-risk alert on {id}: {entity} flagged for {check_type}',
-      'Case {id} assigned to {assigned_to} for {check_type}',
-      'Regulatory filing submitted for {entity} — auto-verified',
-    ],
-    screenTitle: 'Compliance & Risk Dashboard',
-    screenSubtitle: 'Regulatory checks, screening, and case management',
-  },
-  {
-    domain: 'reporting',
-    idLabel: 'Report ID',
-    columns: [
-      { key: 'item_id', label: 'Report ID' },
-      { key: 'report_name', label: 'Report Name' },
-      { key: 'client', label: 'Client' },
-      { key: 'period', label: 'Period' },
-      { key: 'delivered_via', label: 'Delivered Via' },
-      { key: 'status', label: 'Status' },
-    ],
-    sampleIds: ['RPT-001', 'RPT-002', 'RPT-003', 'RPT-004', 'RPT-005', 'RPT-006', 'RPT-007'],
-    sampleValues: {
-      report_name: ['Monthly Performance', 'Quarterly Holdings', 'Tax Lot Report', 'Fee Summary', 'Risk Analysis', 'Cash Flow Statement', 'Gain/Loss Report'],
-      client: ['Hargrove Trust', 'Chen Family Office', 'Meridian Pension', 'Atlas Foundation', 'Sterling Partners', 'Pacific Holdings', 'Vanguard Endowment'],
-      period: ['Jan 2026', 'Q4 2025', 'FY 2025', 'Jan 2026', 'Q4 2025', 'Feb 2026', 'Jan 2026'],
-      delivered_via: ['Client Portal', 'Email', 'SFTP', 'Client Portal', 'PDF/Email', 'API', 'Client Portal'],
-    },
-    metrics: [
-      { label: 'Reports Generated', value: '156', subtext: 'this month', color: 'blue' },
-      { label: 'Delivered', value: '142', subtext: '91% on time', color: 'green' },
-      { label: 'In Progress', value: '9', subtext: 'generating', color: 'amber' },
-      { label: 'Exceptions', value: '5', subtext: 'data issues', color: 'red' },
-    ],
-    activityTemplates: [
-      'Report {id} generated: {report_name} for {client}',
-      'Delivered {report_name} to {client} via {delivered_via}',
-      'Data exception in {id} — {report_name} for {client}',
-      'Quarterly report batch started: {period}',
-      'Client {client} accessed {report_name} on portal',
-    ],
-    screenTitle: 'Client Reporting Dashboard',
-    screenSubtitle: 'Report generation, delivery, and tracking',
-  },
-  {
-    domain: 'operations',
-    idLabel: 'Task ID',
-    columns: [
-      { key: 'item_id', label: 'Task ID' },
-      { key: 'task_name', label: 'Task' },
-      { key: 'assigned_to', label: 'Assigned To' },
-      { key: 'priority', label: 'Priority' },
-      { key: 'due_date', label: 'Due Date' },
-      { key: 'status', label: 'Status' },
-    ],
-    sampleIds: ['TSK-001', 'TSK-002', 'TSK-003', 'TSK-004', 'TSK-005', 'TSK-006', 'TSK-007'],
-    sampleValues: {
-      task_name: ['Update front office system', 'Process cash transfer', 'Reconcile GL entries', 'File regulatory report', 'Review exception queue', 'Update client records', 'Execute trade orders'],
-      assigned_to: ['Emily Watson', 'Michael Chen', 'Sarah Lopez', 'David Kim', 'Rachel Adams', 'James Park', 'Lisa Zhang'],
-      priority: ['High', 'Medium', 'High', 'Low', 'Medium', 'High', 'Medium'],
-      due_date: ['Feb 12, 2026', 'Feb 12, 2026', 'Feb 13, 2026', 'Feb 14, 2026', 'Feb 12, 2026', 'Feb 13, 2026', 'Feb 12, 2026'],
-    },
-    metrics: [
-      { label: 'Tasks Today', value: '42', subtext: 'total queue', color: 'blue' },
-      { label: 'Completed', value: '35', subtext: '83% done', color: 'green' },
-      { label: 'In Progress', value: '5', subtext: 'active', color: 'amber' },
-      { label: 'Blocked', value: '2', subtext: 'needs attention', color: 'red' },
-    ],
-    activityTemplates: [
-      'Task {id} completed: {task_name} by {assigned_to}',
-      'New task assigned: {task_name} to {assigned_to} — {priority} priority',
-      'Task {id} escalated: {task_name} — overdue',
-      'Batch of {task_name} tasks processed automatically',
-      'SLA met for {id}: {task_name} completed on time',
-    ],
-    screenTitle: 'Operations Dashboard',
-    screenSubtitle: 'Task management, processing, and workflow status',
-  },
-];
-
-/** Keywords that map to each domain */
-const DOMAIN_KEYWORDS: Record<string, string[]> = {
-  finance: ['reconcil', 'ledger', 'gl', 'general ledger', 'books and records', 'journal', 'posting', 'cash', 'transfer', 'bank', 'treasury', 'payment', 'settlement', 'clearing', 'pooled'],
-  investment: ['invest', 'portfolio', 'proposal', 'allocation', 'rebalanc', 'equity', 'fixed income', 'securities', 'asset', 'fund', 'aum', 'order', 'trade', 'execute order', 'brokerage'],
-  account: ['account', 'setup', 'sub account', 'sub-account', 'onboard', 'fiduciary', 'custod', 'managed account', 'open account', 'new account'],
-  compliance: ['compliance', 'regulat', 'kyc', 'aml', 'sanctions', 'risk', 'audit', 'policy', 'screening'],
-  reporting: ['report', 'performance', 'statement', 'client report', 'quarterly', 'tax lot', 'fee summary', 'deliver'],
-  operations: ['front office', 'back office', 'process', 'workflow', 'operations', 'system update', 'servicer', 'advise client', 'refer back'],
-};
-
-/**
- * Detect the best-matching domain profile from agent context.
- * Scores each domain by keyword hits across the agent name, description, actions, and integrations.
- */
-function detectDomainProfile(agent: Agent): DomainProfile {
-  const blob = [
-    agent.name,
-    agent.description,
-    ...agent.actions,
-    ...agent.integrations,
-    ...(agent.outputs || []).map(o => o.name),
-  ].join(' ').toLowerCase();
-
-  let bestDomain = 'operations'; // default
-  let bestScore = 0;
-
-  for (const [domain, keywords] of Object.entries(DOMAIN_KEYWORDS)) {
-    let score = 0;
-    for (const kw of keywords) {
-      if (blob.includes(kw)) score++;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      bestDomain = domain;
-    }
-  }
-
-  return DOMAIN_PROFILES.find(p => p.domain === bestDomain) || DOMAIN_PROFILES[DOMAIN_PROFILES.length - 1];
-}
+// ─── Determine columns from agent actions (domain-agnostic) ──────────────
 
 // Determine columns based on agent tasks
 function determineColumnsFromTasks(actions: string[], agent?: Agent): { key: string; label: string }[] {
   const columns: { key: string; label: string }[] = [];
   
-  // Always include item identifier as first column
-  columns.push({ key: 'item_id', label: 'Item ID' });
+  // Always include item identifier as first column — derived from agent name
+  const agentWords = agent ? agent.name.replace(/agent/gi, '').trim().split(/\s+/) : [];
+  const idLabel = agentWords.length > 0 ? `${agentWords[0]} ID` : 'Item ID';
+  columns.push({ key: 'item_id', label: idLabel });
   
   // Analyze each action and add appropriate columns
   let matchedSpecific = false;
@@ -644,10 +385,19 @@ function determineColumnsFromTasks(actions: string[], agent?: Agent): { key: str
     }
   });
   
-  // If no specific keyword matched, use domain profile columns
-  if (!matchedSpecific && agent) {
-    const profile = detectDomainProfile(agent);
-    return profile.columns;
+  // If no specific keyword matched, generate generic columns from agent context
+  if (!matchedSpecific) {
+    // Use the agent's actions to create descriptive columns
+    if (agent && agent.actions.length > 0) {
+      const action1 = agent.actions[0];
+      const shortAction = action1.length > 20 ? action1.substring(0, 17) + '...' : action1;
+      columns.push({ key: 'action_status', label: shortAction });
+      columns.push({ key: 'assigned_to', label: 'Assigned To' });
+      columns.push({ key: 'updated', label: 'Updated' });
+    } else {
+      columns.push({ key: 'description', label: 'Description' });
+      columns.push({ key: 'assigned_to', label: 'Assigned To' });
+    }
   }
   
   if (!columns.some(c => c.key === 'status')) {
