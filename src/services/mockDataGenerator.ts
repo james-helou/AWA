@@ -130,9 +130,10 @@ export async function generateAgentDashboardMockData(
 ): Promise<AIMockData> {
   const { url, apiKey } = getAzureConfig();
 
-  const userPrompt = `You are generating SAMPLE DATA for a live dashboard preview of an AI agent.
+  const userPrompt = `You are generating SAMPLE DATA for a live dashboard preview of an AI agent
+that is part of a larger multi-agent workflow.
 
-===  AGENT CONTEXT  ===
+===  THIS AGENT  ===
 Agent name   : ${agent.name}
 Description  : ${agent.description}
 Type         : ${agent.type}
@@ -142,40 +143,52 @@ ${agent.actions.map((a, i) => `  ${i + 1}. ${a}`).join('\n')}
 Integrations : ${agent.integrations.join(', ') || 'none'}
 Outputs      : ${agent.outputs.map(o => `${o.name} (${o.type})`).join(', ') || 'none'}
 
-===  BUSINESS PROCESS  ===
+===  FULL WORKFLOW CONTEXT  ===
 ${workflowContext}
 
-===  WHAT TO GENERATE  ===
-Return a single JSON object representing what this agent's operator dashboard
-would look like in production.  The data must feel REAL — think of the kind of
-records, names, amounts, statuses, and dates an actual user would see.
+===  INSTRUCTIONS  ===
+Generate a JSON object representing what an operator would see on this agent's
+dashboard in a real production environment.
 
+CRITICAL RULES:
+- The data MUST be specific to what THIS agent does (its actions and integrations).
+- Table columns should reflect the actual data this agent works with — not generic
+  columns. Think: what fields would an operator need to see for these specific actions?
+- Metrics should quantify this agent's specific work, not generic counts.
+- Activity feed messages should reference the agent's actual actions and realistic
+  entity names from the business domain described above.
+- IDs should follow a prefix that makes sense for this agent's domain
+  (e.g. ACCT- for accounts, TXN- for transactions, ORD- for orders, RPT- for reports).
+- Amounts, dates, names, and values must be plausible for the business domain.
+- Think about what the PREVIOUS step would have passed to this agent and what
+  this agent passes to the NEXT step.
+
+RETURN FORMAT:
 {
-  "tableTitle": "<short screen title>",
-  "tableSubtitle": "<one-line description of the view>",
+  "tableTitle": "<screen title reflecting this agent's function>",
+  "tableSubtitle": "<one-line description of what the operator sees>",
   "metrics": [
     // 3-4 KPI cards. Each: { "label", "value" (string), "subtext", "color" }
-    // colors: "blue" totals, "green" success, "amber" pending, "red" failures, "purple" special
+    // colors: "blue" totals, "green" success, "amber" pending, "red" failures
   ],
   "columns": [
-    // 4-6 table columns.  First MUST be { "key":"id", "label":"<domain ID label>" }.
-    // Last MUST be { "key":"status", "label":"Status" }.
-    // Middle columns: pick fields that make sense for THIS agent's domain
-    //   (e.g. amount, customer, risk_score, submitted_date …)
+    // 4-6 columns. First: { "key":"id", "label":"<domain-specific ID label>" }.
+    // Last: { "key":"status", "label":"Status" }.
+    // Middle: fields specific to THIS agent's actions and domain.
   ],
   "rows": [
-    // EXACTLY 6 rows.  Every row must contain ALL column keys PLUS "_statusColor".
-    // "_statusColor" must be one of "green" | "amber" | "red" | "blue".
-    // Mix statuses: ~3 green, ~2 amber, ~1 red.
-    // Use culturally diverse names, plausible IDs, realistic dollar amounts & dates.
+    // EXACTLY 6 rows. Every row has ALL column keys + "_statusColor".
+    // "_statusColor": "green" | "amber" | "red" | "blue".
+    // Mix: ~3 green, ~2 amber, ~1 red. Use diverse names, realistic values.
   ],
   "activityFeed": [
     // 5 entries: { "id", "type" (success|warning|info|error), "message", "time", "user" }
-    // Stagger times: "2 min ago", "8 min ago", "23 min ago", "1 hour ago", "3 hours ago"
+    // Times: "2 min ago", "8 min ago", "23 min ago", "1 hour ago", "3 hours ago"
+    // Messages should directly reference this agent's actions.
   ]
 }
 
-Return ONLY the raw JSON.  No explanation, no markdown fences.`;
+Return ONLY raw JSON. No explanation, no markdown fences.`;
 
   const body = {
     messages: [
@@ -183,13 +196,16 @@ Return ONLY the raw JSON.  No explanation, no markdown fences.`;
         role: 'system',
         content:
           'You are a mock-data generator for enterprise software dashboards. ' +
-          'Return ONLY valid JSON matching the requested schema. ' +
-          'Data must be realistic, domain-appropriate, and diverse.',
+          'You receive full context about a multi-agent workflow and must generate ' +
+          'realistic, domain-specific data for one specific agent\'s dashboard. ' +
+          'The data should reflect what a real operator would see — correct terminology, ' +
+          'plausible values, and fields that match the agent\'s actual responsibilities. ' +
+          'Return ONLY valid JSON matching the requested schema.',
       },
       { role: 'user', content: userPrompt },
     ],
     max_completion_tokens: 4000,
-    temperature: 0.9,
+    temperature: 0.6,
   };
 
   // Retry once on failure (transient network / malformed JSON)

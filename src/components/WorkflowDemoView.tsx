@@ -1431,11 +1431,27 @@ export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDe
     setAgentDataCache(new Map());
     setActiveAgentIndex(0);
 
+    // Build a rich context string so each LLM call understands the full picture
+    const agentSummaries = workflow.agents
+      .map((a, i) => `  Step ${i + 1}: ${a.name} — ${a.description}\n    Actions: ${a.actions.join('; ')}\n    Integrations: ${a.integrations.join(', ') || 'none'}`)
+      .join('\n');
+
+    const richContext = `WORKFLOW: ${workflow.name}
+DESCRIPTION: ${workflow.description}
+COMPLEXITY: ${workflow.estimatedComplexity}
+TOTAL STEPS: ${workflow.agents.length}
+
+FULL AGENT PIPELINE:
+${agentSummaries}
+
+ORIGINAL USER TASKS:
+${originalTasks}`;
+
     let cancelled = false;
 
     // Fire one LLM call per agent, all in parallel
     const promises = workflow.agents.map((agent, idx) =>
-      generateAgentMockDataAsync(agent, originalTasks, idx, workflow.agents.length)
+      generateAgentMockDataAsync(agent, richContext, idx, workflow.agents.length)
         .then(data => {
           if (!cancelled) {
             console.log(`💾 Pre-fetched data for step ${idx + 1}: ${agent.name}`);
