@@ -54,8 +54,8 @@ export function AgentReviewModal({
         {/* Header */}
         <div className="px-8 py-6 border-b border-gray-100">
           <div className="flex items-center space-x-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <div className="w-10 h-10 rounded-xl bg-ey-dark flex items-center justify-center">
+              <svg className="w-5 h-5 text-ey-yellow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -73,7 +73,7 @@ export function AgentReviewModal({
         <div className="flex-1 overflow-y-auto px-8 py-6">
           {isRegenerating ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="w-16 h-16 rounded-full border-4 border-blue-100 border-t-blue-500 animate-spin mb-4"></div>
+              <div className="w-16 h-16 rounded-full border-4 border-ey-yellow/30 border-t-ey-yellow animate-spin mb-4"></div>
               <p className="text-gray-600 font-medium">Redesigning your AI team...</p>
               <p className="text-gray-400 text-sm mt-1">This may take a few moments</p>
             </div>
@@ -167,7 +167,7 @@ export function AgentReviewModal({
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="e.g., I need an agent that specifically handles customer notifications, or I'd like to combine the first two agents..."
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm"
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-ey-yellow focus:border-ey-yellow resize-none text-sm"
                 rows={3}
                 autoFocus
               />
@@ -184,7 +184,7 @@ export function AgentReviewModal({
                 <button
                   onClick={handleSubmitFeedback}
                   disabled={!feedback.trim()}
-                  className="px-5 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2 text-sm font-medium bg-ey-dark text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Regenerate Team
                 </button>
@@ -207,7 +207,7 @@ export function AgentReviewModal({
               <button
                 onClick={onAccept}
                 disabled={isRegenerating}
-                className="flex items-center space-x-2 px-6 py-2.5 text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/25 transition disabled:opacity-50"
+                className="flex items-center space-x-2 px-6 py-2.5 text-sm font-medium bg-ey-yellow text-ey-dark rounded-lg hover:bg-ey-yellow-hover shadow-lg shadow-ey-yellow/25 transition disabled:opacity-50"
               >
                 <span>Looks Good, Continue</span>
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

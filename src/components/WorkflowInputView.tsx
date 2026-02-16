@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { EYLogo } from './EYLogo';
 
 type IconProps = { className?: string };
 
@@ -50,16 +51,14 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-yellow-50/20 to-gray-100">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-6 py-5">
           <div className="flex items-center space-x-4 animate-fade-in">
-            <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-2.5 rounded-xl shadow-lg shadow-blue-500/25 animate-float">
-              <Activity className="w-6 h-6 text-white" />
-            </div>
+            <EYLogo size={44} className="animate-float" />
             <div>
-              <h1 className="text-2xl font-bold gradient-text">Agentic Workflow Architect</h1>
+              <h1 className="text-2xl font-bold text-ey-dark">Agentic Workflow Architect</h1>
               <p className="text-sm text-gray-500">Transform your process tasks into intelligent multi-agent workflows</p>
             </div>
           </div>
@@ -71,22 +70,22 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
         {/* How it works section - moved above input */}
         <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-up">
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-3">
-              <span className="text-blue-600 font-bold">1</span>
+            <div className="w-8 h-8 bg-ey-yellow rounded-lg flex items-center justify-center mb-3">
+              <span className="text-ey-dark font-bold">1</span>
             </div>
             <h3 className="font-semibold text-gray-900 mb-1">Describe Your Process</h3>
             <p className="text-sm text-gray-600">Enter your process as free-form text or list each task line by line — whatever feels natural.</p>
           </div>
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mb-3">
-              <span className="text-purple-600 font-bold">2</span>
+            <div className="w-8 h-8 bg-ey-yellow rounded-lg flex items-center justify-center mb-3">
+              <span className="text-ey-dark font-bold">2</span>
             </div>
             <h3 className="font-semibold text-gray-900 mb-1">AI Analysis</h3>
             <p className="text-sm text-gray-600">Our AI analyzes tasks, groups them logically, and identifies optimal agents.</p>
           </div>
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mb-3">
-              <span className="text-green-600 font-bold">3</span>
+            <div className="w-8 h-8 bg-ey-yellow rounded-lg flex items-center justify-center mb-3">
+              <span className="text-ey-dark font-bold">3</span>
             </div>
             <h3 className="font-semibold text-gray-900 mb-1">Preview Simulation</h3>
             <p className="text-sm text-gray-600">See a simulated preview of your multi-agent workflow in action, as it would look when agents are live.</p>
@@ -97,8 +96,8 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
           {/* Input Header */}
           <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
             <div className="flex items-start space-x-3">
-              <div className="p-2.5 bg-blue-100 rounded-xl">
-                <Brain className="w-6 h-6 text-blue-600" />
+              <div className="p-2.5 bg-ey-yellow/20 rounded-xl">
+                <Brain className="w-6 h-6 text-ey-dark" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Paste Your Process Tasks</h2>
@@ -117,7 +116,7 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
               onChange={(e) => setTasks(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={PLACEHOLDER_TEXT}
-              className="w-full h-80 p-4 bg-gray-50/50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 resize-none transition-all duration-200 font-mono text-sm leading-relaxed"
+              className="w-full h-80 p-4 bg-gray-50/50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-ey-yellow/30 focus:border-ey-yellow resize-none transition-all duration-200 font-mono text-sm leading-relaxed"
               disabled={isLoading}
             />
 
@@ -143,12 +142,12 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
           </div>
 
           {/* Submit Button */}
-          <div className="p-6 bg-gradient-to-r from-gray-50 to-blue-50/30 border-t border-gray-100">
+          <div className="p-6 bg-gradient-to-r from-gray-50 to-yellow-50/30 border-t border-gray-100">
             <div className="flex items-center justify-end">
               <button
                 onClick={handleSubmit}
                 disabled={!tasks.trim() || isLoading}
-                className="group flex items-center space-x-2 px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-200 ripple"
+                className="group flex items-center space-x-2 px-8 py-3.5 bg-ey-yellow text-ey-dark font-semibold rounded-xl hover:bg-ey-yellow-hover disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-ey-yellow/25 hover:shadow-xl hover:shadow-ey-yellow/30 transition-all duration-200 ripple"
               >
                 {isLoading ? (
                   <>

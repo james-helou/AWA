@@ -6,6 +6,15 @@ export default {
   ],
   theme: {
     extend: {
+      colors: {
+        ey: {
+          yellow: '#FFE600',
+          'yellow-hover': '#E6CF00',
+          dark: '#2E2E38',
+          gray: '#747480',
+          'gray-light': '#C0C0C8',
+        },
+      },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',
         'fade-in-up': 'fadeInUp 0.4s ease-out',
@@ -61,9 +70,9 @@ export default {
         },
       },
       boxShadow: {
-        'glow': '0 0 20px rgba(59, 130, 246, 0.3)',
-        'glow-lg': '0 0 30px rgba(59, 130, 246, 0.4)',
-        'inner-glow': 'inset 0 0 20px rgba(59, 130, 246, 0.1)',
+        'glow': '0 0 20px rgba(255, 230, 0, 0.3)',
+        'glow-lg': '0 0 30px rgba(255, 230, 0, 0.4)',
+        'inner-glow': 'inset 0 0 20px rgba(255, 230, 0, 0.1)',
       },
     },
   },

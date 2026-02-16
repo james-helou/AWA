@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Workflow, Agent } from '../types/workflow';
 import { generateAgentDashboardMockData } from '../services/mockDataGenerator';
+import { EYLogo } from './EYLogo';
 
 
 interface WorkflowDemoViewProps {
@@ -1469,16 +1470,14 @@ export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDe
               <button onClick={onBack} className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition">
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-2.5 rounded-xl shadow-lg">
-                <Activity className="w-6 h-6 text-white" />
-              </div>
+              <EYLogo size={40} />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Agentic Workflow Architect</h1>
+                <h1 className="text-xl font-bold text-ey-dark">Agentic Workflow Architect</h1>
                 <p className="text-sm text-gray-500">{workflow.agents.length}-Step Workflow • Live Preview</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <span className="px-3 py-1.5 text-xs font-bold bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 rounded-full border border-amber-200">
+              <span className="px-3 py-1.5 text-xs font-bold bg-ey-yellow text-ey-dark rounded-full border border-ey-yellow-hover">
                 PREVIEW MODE
               </span>
             </div>

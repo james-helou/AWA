@@ -56,7 +56,7 @@ button:active:not(:disabled) {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #2E2E38 0%, #2E2E38 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -73,7 +73,7 @@ button:active:not(:disabled) {
 .gradient-border {
   position: relative;
   background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899) border-box;
+              linear-gradient(135deg, #FFE600, #2E2E38) border-box;
   border: 2px solid transparent;
 }
 
@@ -87,7 +87,7 @@ button:active:not(:disabled) {
 /* Focus ring animation */
 input:focus, textarea:focus, button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 0 3px rgba(255, 230, 0, 0.35);
 }
 
 /* Smooth scrolling */
