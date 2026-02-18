@@ -49,71 +49,66 @@ function GeneratingOverlay() {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-gray-50 via-yellow-50/20 to-gray-100">
-      <div className="max-w-md w-full mx-6 text-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ey-dark">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 opacity-[0.03]" style={{
+        backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+        backgroundSize: '32px 32px',
+      }} />
+
+      <div className="relative max-w-lg w-full mx-6 text-center">
         {/* Animated logo ring */}
-        <div className="relative w-28 h-28 mx-auto mb-8">
-          {/* Outer spinning ring */}
-          <svg className="absolute inset-0 w-28 h-28 animate-spin" style={{ animationDuration: '3s' }} viewBox="0 0 112 112">
-            <circle cx="56" cy="56" r="52" fill="none" stroke="#E5E7EB" strokeWidth="4" />
-            <circle cx="56" cy="56" r="52" fill="none" stroke="#FFE600" strokeWidth="4"
-              strokeDasharray="327" strokeDashoffset={327 - (327 * progress) / 100}
-              strokeLinecap="round" className="transition-all duration-300"
-              style={{ filter: 'drop-shadow(0 0 6px rgba(255,230,0,0.4))' }} />
+        <div className="relative w-32 h-32 mx-auto mb-10">
+          {/* Glow behind ring */}
+          <div className="absolute inset-0 rounded-full blur-xl bg-ey-yellow/20" />
+          {/* Track ring */}
+          <svg className="absolute inset-0 w-32 h-32" viewBox="0 0 128 128">
+            <circle cx="64" cy="64" r="58" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
           </svg>
-          {/* Center icon */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-4xl" style={{ animation: 'staggerUp 0.3s ease-out' }} key={activeStep}>
-              {LOADING_STEPS[activeStep].icon}
-            </div>
+          {/* Progress ring (doesn't spin — just fills) */}
+          <svg className="absolute inset-0 w-32 h-32 -rotate-90" viewBox="0 0 128 128">
+            <circle cx="64" cy="64" r="58" fill="none" stroke="#FFE600" strokeWidth="5"
+              strokeDasharray="364.4" strokeDashoffset={364.4 - (364.4 * progress) / 100}
+              strokeLinecap="round" className="transition-all duration-300"
+              style={{ filter: 'drop-shadow(0 0 8px rgba(255,230,0,0.5))' }} />
+          </svg>
+          {/* Center percentage */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-4xl font-bold text-white tabular-nums">{Math.round(progress)}%</span>
           </div>
         </div>
 
-        {/* Percentage */}
-        <p className="text-3xl font-bold text-ey-dark mb-1 tabular-nums">
-          {Math.round(progress)}%
-        </p>
-
         {/* Active step label */}
-        <p className="text-lg font-semibold text-gray-900 mb-1" key={`label-${activeStep}`}
-           style={{ animation: 'staggerUp 0.3s ease-out' }}>
-          {LOADING_STEPS[activeStep].label}
-        </p>
-        <p className="text-sm text-gray-500 mb-10" key={`detail-${activeStep}`}
-           style={{ animation: 'staggerUp 0.3s ease-out' }}>
-          {LOADING_STEPS[activeStep].detail}
-        </p>
-
-        {/* Step indicators */}
-        <div className="flex items-center justify-center space-x-3">
-          {LOADING_STEPS.map((step, i) => (
-            <div key={i} className="flex flex-col items-center">
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-500 ${
-                  i < activeStep
-                    ? 'bg-green-100 text-green-600 scale-100'
-                    : i === activeStep
-                    ? 'bg-ey-yellow text-ey-dark scale-110 shadow-lg shadow-ey-yellow/30'
-                    : 'bg-gray-100 text-gray-400 scale-90'
-                }`}
-              >
-                {i < activeStep ? '✓' : i + 1}
-              </div>
-              {i < LOADING_STEPS.length - 1 && (
-                <div className={`hidden`} /> // spacing only; line connectors not needed for center layout
-              )}
-            </div>
-          ))}
+        <div key={`step-${activeStep}`} style={{ animation: 'staggerUp 0.35s ease-out' }}>
+          <p className="text-xl font-semibold text-white mb-1.5">
+            {LOADING_STEPS[activeStep].label}
+          </p>
+          <p className="text-sm text-gray-400 mb-12">
+            {LOADING_STEPS[activeStep].detail}
+          </p>
         </div>
 
-        {/* Step labels row */}
-        <div className="flex items-center justify-center space-x-3 mt-2">
+        {/* Step progress bar */}
+        <div className="flex items-center justify-center space-x-2 px-4">
           {LOADING_STEPS.map((step, i) => (
-            <span key={i} className={`text-[10px] w-10 text-center leading-tight transition-colors duration-300 ${
-              i <= activeStep ? 'text-gray-600' : 'text-gray-300'
-            }`}>
-              {step.label.split(' ').slice(0, 2).join(' ')}
-            </span>
+            <div key={i} className="flex items-center">
+              {/* Step dot */}
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500 ${
+                i < activeStep
+                  ? 'bg-ey-yellow text-ey-dark'
+                  : i === activeStep
+                  ? 'bg-ey-yellow/20 text-ey-yellow ring-2 ring-ey-yellow'
+                  : 'bg-white/10 text-gray-500'
+              }`}>
+                {i < activeStep ? '✓' : step.icon}
+              </div>
+              {/* Connector line */}
+              {i < LOADING_STEPS.length - 1 && (
+                <div className={`w-8 h-0.5 mx-1 transition-colors duration-500 ${
+                  i < activeStep ? 'bg-ey-yellow' : 'bg-white/10'
+                }`} />
+              )}
+            </div>
           ))}
         </div>
       </div>
