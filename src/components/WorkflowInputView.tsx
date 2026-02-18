@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { EYLogo } from './EYLogo';
 
 type IconProps = { className?: string };
@@ -14,6 +14,112 @@ const Brain = ({ className }: IconProps) => (
     <circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" />
   </svg>
 );
+
+// ─── Loading Steps ──────────────────────────────────────────────────────────
+const LOADING_STEPS = [
+  { label: 'Analyzing your tasks', icon: '🔍', detail: 'Reading and understanding each task...' },
+  { label: 'Identifying agent roles', icon: '🤖', detail: 'Determining the right AI specialists...' },
+  { label: 'Mapping dependencies', icon: '🔗', detail: 'Building connections between agents...' },
+  { label: 'Designing workflow', icon: '⚙️', detail: 'Structuring the optimal pipeline...' },
+  { label: 'Generating preview', icon: '✨', detail: 'Preparing your workflow simulation...' },
+];
+
+function GeneratingOverlay() {
+  const [activeStep, setActiveStep] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    // Step through the phases every ~3s
+    const stepInterval = setInterval(() => {
+      setActiveStep(prev => (prev < LOADING_STEPS.length - 1 ? prev + 1 : prev));
+    }, 3000);
+    return () => clearInterval(stepInterval);
+  }, []);
+
+  useEffect(() => {
+    // Smooth progress bar — fast at first, slows down near the end
+    const tick = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 92) return prev; // cap at 92 so it never "finishes" before the real call does
+        const remaining = 92 - prev;
+        return prev + Math.max(0.15, remaining * 0.02);
+      });
+    }, 50);
+    return () => clearInterval(tick);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-gray-50 via-yellow-50/20 to-gray-100">
+      <div className="max-w-md w-full mx-6 text-center">
+        {/* Animated logo ring */}
+        <div className="relative w-28 h-28 mx-auto mb-8">
+          {/* Outer spinning ring */}
+          <svg className="absolute inset-0 w-28 h-28 animate-spin" style={{ animationDuration: '3s' }} viewBox="0 0 112 112">
+            <circle cx="56" cy="56" r="52" fill="none" stroke="#E5E7EB" strokeWidth="4" />
+            <circle cx="56" cy="56" r="52" fill="none" stroke="#FFE600" strokeWidth="4"
+              strokeDasharray="327" strokeDashoffset={327 - (327 * progress) / 100}
+              strokeLinecap="round" className="transition-all duration-300"
+              style={{ filter: 'drop-shadow(0 0 6px rgba(255,230,0,0.4))' }} />
+          </svg>
+          {/* Center icon */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-4xl" style={{ animation: 'staggerUp 0.3s ease-out' }} key={activeStep}>
+              {LOADING_STEPS[activeStep].icon}
+            </div>
+          </div>
+        </div>
+
+        {/* Percentage */}
+        <p className="text-3xl font-bold text-ey-dark mb-1 tabular-nums">
+          {Math.round(progress)}%
+        </p>
+
+        {/* Active step label */}
+        <p className="text-lg font-semibold text-gray-900 mb-1" key={`label-${activeStep}`}
+           style={{ animation: 'staggerUp 0.3s ease-out' }}>
+          {LOADING_STEPS[activeStep].label}
+        </p>
+        <p className="text-sm text-gray-500 mb-10" key={`detail-${activeStep}`}
+           style={{ animation: 'staggerUp 0.3s ease-out' }}>
+          {LOADING_STEPS[activeStep].detail}
+        </p>
+
+        {/* Step indicators */}
+        <div className="flex items-center justify-center space-x-3">
+          {LOADING_STEPS.map((step, i) => (
+            <div key={i} className="flex flex-col items-center">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-500 ${
+                  i < activeStep
+                    ? 'bg-green-100 text-green-600 scale-100'
+                    : i === activeStep
+                    ? 'bg-ey-yellow text-ey-dark scale-110 shadow-lg shadow-ey-yellow/30'
+                    : 'bg-gray-100 text-gray-400 scale-90'
+                }`}
+              >
+                {i < activeStep ? '✓' : i + 1}
+              </div>
+              {i < LOADING_STEPS.length - 1 && (
+                <div className={`hidden`} /> // spacing only; line connectors not needed for center layout
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Step labels row */}
+        <div className="flex items-center justify-center space-x-3 mt-2">
+          {LOADING_STEPS.map((step, i) => (
+            <span key={i} className={`text-[10px] w-10 text-center leading-tight transition-colors duration-300 ${
+              i <= activeStep ? 'text-gray-600' : 'text-gray-300'
+            }`}>
+              {step.label.split(' ').slice(0, 2).join(' ')}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface WorkflowInputViewProps {
   onGenerate: (tasks: string) => void;
@@ -46,6 +152,9 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-yellow-50/20 to-gray-100">
+      {/* Full-screen loading overlay */}
+      {isLoading && <GeneratingOverlay />}
+
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-6 py-5">
