@@ -232,11 +232,6 @@ export async function regenerateWorkflowWithFeedback(
   currentWorkflow: Workflow, 
   feedback: string
 ): Promise<Workflow> {
-  // Build a summary of current agents for context
-  const currentAgentsSummary = currentWorkflow.agents
-    .map((a, i) => `${i + 1}. ${a.name}: ${a.description}`)
-    .join('\n');
-
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
     { role: 'user', content: `Analyze these tasks and design an optimal multi-agent workflow:\n\n${tasks}` },
