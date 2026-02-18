@@ -43,9 +43,6 @@ export interface Agent {
     name: string;
     type: 'data' | 'notification' | 'document' | 'decision';
   }[];
-  
-  // Sample data to show in preview
-  sampleData?: SampleDataConfig;
 }
 
 export type AgentColor = 'blue' | 'purple' | 'green' | 'amber' | 'red' | 'indigo' | 'pink' | 'cyan';
@@ -65,51 +62,4 @@ export interface HumanTouchpoint {
   type: 'approval' | 'decision' | 'input' | 'review';
   description: string;
   required: boolean;
-}
-
-export interface SampleDataConfig {
-  type: 'table' | 'cards' | 'timeline' | 'list';
-  title: string;
-  description?: string;
-  columns?: { key: string; label: string; type?: 'text' | 'status' | 'date' | 'money' }[];
-  rows?: Record<string, any>[];
-  items?: { title: string; subtitle?: string; status?: string; metadata?: Record<string, string> }[];
-}
-
-// Input types - different ways users can create workflows
-export interface WorkflowInput {
-  type: 'text' | 'template' | 'form' | 'file';
-  content: string | TemplateSelection | FormData | FileUpload;
-}
-
-export interface TemplateSelection {
-  templateId: string;
-  customization?: string;
-  customizations?: Record<string, string>;
-  modifiedWorkflow?: Omit<Workflow, 'id' | 'originalPrompt' | 'generatedAt'>;
-}
-
-export interface FormData {
-  goal: string;
-  steps: string[];
-  dataSources: string[];
-  approvals: string[];
-}
-
-export interface FileUpload {
-  fileName: string;
-  content: string;
-  mimeType: string;
-}
-
-// Template for pre-built workflows
-export interface WorkflowTemplate {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  icon: string;
-  tags: string[];
-  previewImage?: string;
-  workflow: Omit<Workflow, 'id' | 'originalPrompt' | 'generatedAt'>;
 }
