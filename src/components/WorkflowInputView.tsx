@@ -208,13 +208,13 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
           </div>
 
           {/* Textarea */}
-          <div className="p-6">
+          <div className="px-6 py-4">
             <textarea
               value={tasks}
               onChange={(e) => setTasks(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={PLACEHOLDER_TEXT}
-              className="w-full h-80 p-4 bg-gray-50/50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-ey-yellow/30 focus:border-ey-yellow resize-none transition-all duration-200 font-mono text-sm leading-relaxed"
+              className="w-full h-52 p-4 bg-gray-50/50 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-ey-yellow/30 focus:border-ey-yellow resize-none transition-all duration-200 font-mono text-sm leading-relaxed"
               disabled={isLoading}
             />
 
