@@ -62,22 +62,22 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* How it works section - moved above input */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-up">
-          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm" style={{ animation: 'staggerUp 0.4s ease-out both', animationDelay: '100ms' }}>
             <div className="w-8 h-8 bg-ey-yellow rounded-lg flex items-center justify-center mb-3">
               <span className="text-ey-dark font-bold">1</span>
             </div>
             <h3 className="font-semibold text-gray-900 mb-1">Describe Your Process</h3>
             <p className="text-sm text-gray-600">Enter your process as free-form text or list each task line by line — whatever feels natural.</p>
           </div>
-          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm" style={{ animation: 'staggerUp 0.4s ease-out both', animationDelay: '200ms' }}>
             <div className="w-8 h-8 bg-ey-yellow rounded-lg flex items-center justify-center mb-3">
               <span className="text-ey-dark font-bold">2</span>
             </div>
             <h3 className="font-semibold text-gray-900 mb-1">AI Analysis</h3>
             <p className="text-sm text-gray-600">Our AI analyzes tasks, groups them logically, and identifies optimal agents.</p>
           </div>
-          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm" style={{ animation: 'staggerUp 0.4s ease-out both', animationDelay: '300ms' }}>
             <div className="w-8 h-8 bg-ey-yellow rounded-lg flex items-center justify-center mb-3">
               <span className="text-ey-dark font-bold">3</span>
             </div>

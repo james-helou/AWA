@@ -108,6 +108,38 @@ function getColor(c: string) {
   return agentColors[c] || agentColors.blue;
 }
 
+// ─── Animated Count-Up Value ────────────────────────────────────────────────
+function AnimatedValue({ value }: { value: string }) {
+  const match = value.match(/^([^\d]*)([\d,.]+)(.*)$/);
+  if (!match) return <>{value}</>;
+
+  const prefix = match[1];
+  const numStr = match[2];
+  const suffix = match[3];
+  const hasDecimal = numStr.includes('.');
+  const target = parseFloat(numStr.replace(/,/g, ''));
+  const decimals = hasDecimal ? (numStr.split('.')[1]?.length || 0) : 0;
+
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    let raf: number;
+    const duration = 900;
+    const start = performance.now();
+    const animate = (now: number) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      setCurrent(eased * target);
+      if (progress < 1) raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+
+  const formatted = hasDecimal ? current.toFixed(decimals) : Math.round(current).toString();
+  return <>{prefix}{formatted}{suffix}</>;
+}
+
 // ─── Mock Data Helpers ──────────────────────────────────────────────────────
 const firstNames = ['Sarah', 'Mike', 'Emily', 'James', 'Lisa', 'David', 'Rachel', 'Tom', 'Anna', 'Chris', 'Maria', 'John', 'Jessica', 'Robert', 'Michelle', 'Carlos', 'Amanda', 'Kevin', 'Nicole', 'Brandon', 'Stephanie', 'Ryan', 'Jennifer', 'Daniel', 'Laura', 'Andrew', 'Samantha', 'Eric', 'Ashley', 'Jason'];
 const lastNames = ['Chen', 'Rodriguez', 'Watson', 'Park', 'Thompson', 'Kim', 'Adams', 'Martinez', 'Petrov', "O'Brien", 'Singh', 'Johnson', 'Williams', 'Lee', 'Garcia', 'Patel', 'Taylor', 'Anderson', 'Wilson', 'Moore', 'Jackson', 'White', 'Harris', 'Martin', 'Thompson', 'Lopez', 'Gonzalez', 'Clark', 'Lewis', 'Walker'];
@@ -632,14 +664,14 @@ function AgentDashboard({
       {/* Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {mockData.metrics.map((metric, i) => (
-          <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+          <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200" style={{ animation: 'staggerUp 0.4s ease-out both', animationDelay: `${i * 80}ms` }}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{metric.label}</span>
               <div className={`p-2 rounded-lg ${metricColorMap[metric.color] || metricColorMap.blue}`}>
                 {metricIcon(metric.color)}
               </div>
             </div>
-            <p className="text-3xl font-bold text-gray-900">{metric.value}</p>
+            <p className="text-3xl font-bold text-gray-900"><AnimatedValue value={metric.value} /></p>
             <p className={`text-xs mt-1 ${
               metric.subtext.includes('↑') || metric.subtext.includes('+')
                 ? 'text-green-600' : metric.subtext.includes('↓') && metric.subtext.includes('faster')
@@ -778,11 +810,12 @@ function AgentDashboard({
                         No items match your search or filter.
                       </td>
                     </tr>
-                  ) : filteredRows.map((row) => (
+                  ) : filteredRows.map((row, rowIndex) => (
                     <tr
                       key={row.id as string}
                       onClick={() => setSelectedRow(row)}
                       className="hover:bg-blue-50/50 cursor-pointer transition-colors"
+                      style={{ animation: 'staggerUp 0.3s ease-out both', animationDelay: `${rowIndex * 40}ms` }}
                     >
                       {mockData.columns.map(col => (
                         <td key={col.key} className="px-5 py-4">
@@ -957,7 +990,7 @@ function AgentDashboard({
             <h4 className="text-sm font-bold text-gray-900">Accuracy</h4>
             <Shield className="w-5 h-5 text-green-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{bottomStats.accuracy}</p>
+          <p className="text-3xl font-bold text-gray-900"><AnimatedValue value={bottomStats.accuracy} /></p>
           <p className="text-xs text-gray-500 mt-1">Overall precision rate</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
@@ -965,7 +998,7 @@ function AgentDashboard({
             <h4 className="text-sm font-bold text-gray-900">Automation</h4>
             <Zap className="w-5 h-5 text-blue-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{bottomStats.automation}</p>
+          <p className="text-3xl font-bold text-gray-900"><AnimatedValue value={bottomStats.automation} /></p>
           <p className="text-xs text-gray-500 mt-1">Fully automated tasks</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
@@ -973,15 +1006,15 @@ function AgentDashboard({
             <h4 className="text-sm font-bold text-gray-900">Performance</h4>
             <TrendingUp className="w-5 h-5 text-green-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{bottomStats.performance}</p>
+          <p className="text-3xl font-bold text-gray-900"><AnimatedValue value={bottomStats.performance} /></p>
           <p className="text-xs text-gray-500 mt-1">Improvement vs last period</p>
         </div>
       </div>
 
       {/* Row Detail Modal */}
       {selectedRow && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedRow(null)}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 modal-backdrop" onClick={() => setSelectedRow(null)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-gray-50 to-gray-100">
               <div>
                 <h2 className="text-base font-bold text-gray-900">Item Details</h2>
@@ -1042,8 +1075,8 @@ function AgentDashboard({
 
       {/* Add Manual Entry Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowAddModal(false)}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 modal-backdrop" onClick={() => setShowAddModal(false)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">Add Manual Entry</h2>
               <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg transition">
@@ -1089,8 +1122,8 @@ function AgentDashboard({
 
       {/* Reminder Modal */}
       {showReminderModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowReminderModal(false)}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 modal-backdrop" onClick={() => setShowReminderModal(false)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50">
               <div>
                 <h2 className="text-base font-bold text-gray-900">Send Reminders</h2>

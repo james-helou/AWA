@@ -49,8 +49,8 @@ export function AgentReviewModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 modal-backdrop">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col modal-content">
         {/* Header */}
         <div className="px-8 py-6 border-b border-gray-100">
           <div className="flex items-center space-x-3 mb-2">
@@ -97,6 +97,7 @@ export function AgentReviewModal({
                   <div 
                     key={agent.id}
                     className={`rounded-xl border-2 p-5 ${colorClasses[agent.color] || 'bg-gray-50 border-gray-200'}`}
+                    style={{ animation: 'staggerUp 0.35s ease-out both', animationDelay: `${index * 80}ms` }}
                   >
                     <div className="flex items-start space-x-4">
                       {/* Agent Number Badge */}
