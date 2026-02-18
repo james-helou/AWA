@@ -240,7 +240,7 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
           </div>
 
           {/* Submit Button */}
-          <div className="p-6 bg-gradient-to-r from-gray-50 to-yellow-50/30 border-t border-gray-100">
+          <div className="px-6 py-3 bg-gradient-to-r from-gray-50 to-yellow-50/30 border-t border-gray-100">
             <div className="flex items-center justify-end">
               <button
                 onClick={handleSubmit}
