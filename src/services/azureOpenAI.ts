@@ -114,7 +114,8 @@ async function callAzureOpenAI(messages: { role: string; content: string }[]): P
     },
     body: JSON.stringify({
       messages,
-      max_completion_tokens: 16000
+      max_completion_tokens: 16000,
+      response_format: { type: 'json_object' },
     }),
   });
 

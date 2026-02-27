@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { EYLogo } from './EYLogo';
 
 type IconProps = { className?: string };
-
+// Simple send icon for the generate button
 const Send = ({ className }: IconProps) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <path d="m22 2-7 20-4-9-9-4 20-7Z" /><path d="M22 2 11 13" />
   </svg>
 );
 
+//paper airplane icon for the submit button
 const Brain = ({ className }: IconProps) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" />
@@ -24,25 +25,29 @@ const LOADING_STEPS = [
   { label: 'Generating preview', icon: '✨', detail: 'Preparing your workflow simulation...' },
 ];
 
+// Full-screen loading overlay with animated progress and step indicators
 function GeneratingOverlay() {
   const [activeStep, setActiveStep] = useState(0);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Step through the phases every ~3s
+    // Step through the phases every ~1.5s (faster model = faster steps)
     const stepInterval = setInterval(() => {
       setActiveStep(prev => (prev < LOADING_STEPS.length - 1 ? prev + 1 : prev));
-    }, 3000);
+    }, 1500);
     return () => clearInterval(stepInterval);
   }, []);
 
   useEffect(() => {
-    // Smooth progress bar — fast at first, slows down near the end
+    // Smooth progress bar — reaches ~90% in ~4-5s, then crawls.
+    // Uses an ease-out curve: fast early, gradually slowing.
     const tick = setInterval(() => {
       setProgress(prev => {
-        if (prev >= 92) return prev; // cap at 92 so it never "finishes" before the real call does
-        const remaining = 92 - prev;
-        return prev + Math.max(0.15, remaining * 0.02);
+        if (prev >= 95) return prev;
+        const remaining = 95 - prev;
+        // Aggressive early ramp: 8% of remaining each tick (50ms intervals)
+        // At 0%: +7.6/tick → hits 50% in ~0.5s, 80% in ~1.5s, 90% in ~3s
+        return prev + Math.max(0.1, remaining * 0.08);
       });
     }, 50);
     return () => clearInterval(tick);
@@ -131,9 +136,11 @@ Create client profile detailing risk profile
 Update profile with reporting preferences
 ...`;
 
+// Main input view where users paste their tasks and kick off the workflow generation
 export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInputViewProps) {
   const [tasks, setTasks] = useState('');
 
+ // Handle the generate button click or Ctrl+Enter keypress
   const handleSubmit = () => {
     if (!tasks.trim() || isLoading) return;
     onGenerate(tasks);
@@ -145,6 +152,7 @@ export function WorkflowInputView({ onGenerate, isLoading, error }: WorkflowInpu
     }
   };
 
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-yellow-50/20 to-gray-100">
       {/* Full-screen loading overlay */}

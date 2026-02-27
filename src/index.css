@@ -122,3 +122,68 @@ html {
 .modal-content {
   animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ─── Technical Graph — Dark Theme ─────────────────────────────────────── */
+
+/* Pulsing status dot on agent nodes */
+@keyframes techPulse {
+  0% { transform: scale(1); opacity: 0.75; }
+  50% { transform: scale(1.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.tech-pulse {
+  animation: techPulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Animated flowing edge */
+.react-flow__edge.animated path {
+  animation: flowDash 1.5s linear infinite;
+}
+@keyframes flowDash {
+  to { stroke-dashoffset: -20; }
+}
+
+/* Node grab cursor */
+.tech-node { cursor: grab; }
+.tech-node:active { cursor: grabbing; }
+
+/* Handle hover glow */
+.tech-handle:hover {
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.3) !important;
+  transform: scale(1.2);
+  transition: all 0.15s ease;
+}
+
+/* Edge label: fade in on hover */
+.tech-graph-canvas .react-flow__edge-textwrapper {
+  opacity: 0.4;
+  transition: opacity 0.25s ease;
+}
+.tech-graph-canvas .react-flow__edge:hover .react-flow__edge-textwrapper,
+.tech-graph-canvas .react-flow__edge.selected .react-flow__edge-textwrapper {
+  opacity: 1;
+}
+
+/* Edge hover glow */
+.react-flow__edge path {
+  transition: stroke-width 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
+}
+.react-flow__edge:hover path {
+  stroke-width: 3 !important;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* Dark-themed controls & minimap */
+.react-flow__minimap {
+  border-radius: 12px !important;
+}
+
+/* Dark-themed React Flow panel background */
+.tech-graph-canvas {
+  background: #0f172a !important;
+}
+
+/* Subtle grid crosshair on the canvas */
+.tech-graph-canvas .react-flow__background {
+  opacity: 0.6;
+}

@@ -1,12 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Workflow } from './types/workflow';
 import { generateWorkflowWithAI, regenerateWorkflowWithFeedback } from './services/azureOpenAI';
 import { WorkflowInputView } from './components/WorkflowInputView';
 import { AgentReviewModal } from './components/AgentReviewModal';
 import { WorkflowDemoView } from './components/WorkflowDemoView';
 
+/** Feature flags (inlined) */
+const features = {
+  techGraph: (import.meta.env.VITE_FEATURE_TECH_GRAPH ?? 'true') === 'true',
+} as const;
+
+// Lazy-load the technical graph page (only loaded when navigated to)
+const TechGraphPage = lazy(() => import('./components/tech/TechGraphPage'));
+
 // App modes
-type AppMode = 'input' | 'review' | 'preview';
+type AppMode = 'input' | 'review' | 'preview' | 'techGraph';
 
 // Restore workflow from sessionStorage on page refresh
 const _savedState: { workflow: Workflow; originalTasks: string } | null = (() => {
@@ -77,6 +85,24 @@ function App() {
     setMode('input');
   };
 
+  // Technical graph mode – lazy-loaded, feature-flagged
+  if (mode === 'techGraph' && features.techGraph) {
+    return (
+      <Suspense
+        fallback={
+          <div className="h-screen w-screen flex items-center justify-center bg-gray-50">
+            <div className="w-10 h-10 border-4 border-[#FFE600] border-t-transparent rounded-full animate-spin" />
+          </div>
+        }
+      >
+        <TechGraphPage
+          scenarioText={originalTasks}
+          onBack={() => setMode('preview')}
+        />
+      </Suspense>
+    );
+  }
+
   // Preview mode - show the clean workflow demo view
   if (mode === 'preview' && workflow) {
     return (
@@ -84,6 +110,7 @@ function App() {
         workflow={workflow}
         originalTasks={originalTasks}
         onBack={handleBack}
+        onTechGraph={features.techGraph ? () => setMode('techGraph') : undefined}
       />
     );
   }

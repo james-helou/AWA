@@ -4,6 +4,7 @@
 
 import { Agent } from '../types/workflow';
 
+// Types for the raw LLM response before normalisation
 export interface AIMockData {
   activityFeed?: Array<{ id: string; type: string; message: string; time: string; user?: string; metadata?: any }>;
   rows?: Array<Record<string, any>>;
@@ -15,8 +16,21 @@ export interface AIMockData {
   [key: string]: any;
 }
 
+/** Pre-built entity pool shared across all agent mock-data calls */
+export interface SharedEntityPool {
+  clientNames: string[];
+  accountIds: string[];
+  transactionIds: string[];
+  amounts: string[];
+  dates: string[];
+  products: string[];
+  regions: string[];
+  staffNames: string[];
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+// Get Azure OpenAI configuration from environment variables
 function getAzureConfig() {
   const endpoint = import.meta.env.VITE_AZURE_OPENAI_ENDPOINT;
   const model = import.meta.env.VITE_AZURE_OPENAI_MODEL;
@@ -113,6 +127,104 @@ function normaliseResponse(parsed: Record<string, any>, agent: Agent): AIMockDat
 // ─── Main export ────────────────────────────────────────────────────────────
 
 /**
+ * Generate a shared entity pool via the LLM so every agent references the
+ * same client names, account IDs, etc.  Falls back to deterministic defaults
+ * if the LLM call fails.
+ */
+export async function generateSharedEntityPool(
+  workflowContext: string,
+): Promise<SharedEntityPool> {
+  const { url, apiKey } = getAzureConfig();
+
+  const prompt = `You are generating a SHARED ENTITY POOL for a multi-agent workflow demo.
+Every agent dashboard in this demo will reference the SAME entities to ensure cross-agent consistency.
+
+WORKFLOW CONTEXT:
+${workflowContext}
+
+Generate a JSON object with the following arrays. Use names, IDs and values that are
+realistic for the business domain described above.
+
+{
+  "clientNames": ["<6 realistic client/counterparty names for this domain>"],
+  "accountIds": ["<6 account/portfolio IDs with a domain-appropriate prefix, e.g. ACCT-XXXX>"],
+  "transactionIds": ["<6 transaction/case IDs with a domain-appropriate prefix, e.g. TXN-XXXX>"],
+  "amounts": ["<6 realistic dollar/currency amounts as strings, e.g. '$1,250,000'>"],
+  "dates": ["<6 recent dates in YYYY-MM-DD format>"],
+  "products": ["<4-6 product/instrument/asset names relevant to this domain>"],
+  "regions": ["<4 geographic regions or offices>"],
+  "staffNames": ["<6 realistic staff member names>"]
+}
+
+Return ONLY raw JSON. No explanation, no markdown fences.`;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'api-key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: 'You generate realistic mock entity data for enterprise demos. Return ONLY valid JSON.' },
+          { role: 'user', content: prompt },
+        ],
+        max_completion_tokens: 2000,
+        temperature: 0.7,
+        response_format: { type: 'json_object' },
+      }),
+    });
+
+    if (!res.ok) throw new Error(`Azure OpenAI ${res.status}`);
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('Empty response');
+
+    const parsed = extractJSON(content);
+    // Validate arrays exist, fall back to defaults for any missing
+    return {
+      clientNames:    Array.isArray(parsed.clientNames)    ? parsed.clientNames    : FALLBACK_POOL.clientNames,
+      accountIds:     Array.isArray(parsed.accountIds)     ? parsed.accountIds     : FALLBACK_POOL.accountIds,
+      transactionIds: Array.isArray(parsed.transactionIds) ? parsed.transactionIds : FALLBACK_POOL.transactionIds,
+      amounts:        Array.isArray(parsed.amounts)        ? parsed.amounts        : FALLBACK_POOL.amounts,
+      dates:          Array.isArray(parsed.dates)          ? parsed.dates          : FALLBACK_POOL.dates,
+      products:       Array.isArray(parsed.products)       ? parsed.products       : FALLBACK_POOL.products,
+      regions:        Array.isArray(parsed.regions)        ? parsed.regions        : FALLBACK_POOL.regions,
+      staffNames:     Array.isArray(parsed.staffNames)     ? parsed.staffNames     : FALLBACK_POOL.staffNames,
+    };
+  } catch (err) {
+    console.warn('⚠️ Failed to generate shared entity pool, using fallback:', err);
+    return FALLBACK_POOL;
+  }
+}
+
+const FALLBACK_POOL: SharedEntityPool = {
+  clientNames: ['Meridian Capital Group', 'Atlas Financial Holdings', 'Pinnacle Investments LLC', 'Crossbridge Partners', 'Vanguard Institutional', 'BlackRock Fund Advisors'],
+  accountIds: ['ACCT-4521', 'ACCT-7834', 'ACCT-1290', 'ACCT-5678', 'ACCT-3345', 'ACCT-9012'],
+  transactionIds: ['TXN-20240115-001', 'TXN-20240115-002', 'TXN-20240115-003', 'TXN-20240115-004', 'TXN-20240115-005', 'TXN-20240115-006'],
+  amounts: ['$1,250,000', '$3,400,000', '$890,500', '$2,175,000', '$5,600,000', '$720,000'],
+  dates: ['2024-01-15', '2024-01-14', '2024-01-13', '2024-01-12', '2024-01-11', '2024-01-10'],
+  products: ['US Treasury Bond', 'Corporate Bond A', 'Equity Index Fund', 'FX Forward'],
+  regions: ['New York', 'London', 'Singapore', 'Frankfurt'],
+  staffNames: ['Sarah Chen', 'James Morrison', 'Priya Patel', 'David Kim', 'Maria Rodriguez', 'Alex Thompson'],
+};
+
+/** Format the shared pool as a prompt-friendly string */
+function formatEntityPoolForPrompt(pool: SharedEntityPool): string {
+  return `===  SHARED ENTITY POOL (use ONLY these names/IDs across ALL agents)  ===
+Client Names     : ${pool.clientNames.join(', ')}
+Account IDs      : ${pool.accountIds.join(', ')}
+Transaction IDs  : ${pool.transactionIds.join(', ')}
+Amounts          : ${pool.amounts.join(', ')}
+Dates            : ${pool.dates.join(', ')}
+Products         : ${pool.products.join(', ')}
+Regions          : ${pool.regions.join(', ')}
+Staff Names      : ${pool.staffNames.join(', ')}
+
+CRITICAL: Reuse these exact names, IDs, and values in your mock data so that
+data is CONSISTENT when the user navigates between agent dashboards.
+Pick a subset for this agent's rows — do NOT use all of them in every agent.`;
+}
+
+/**
  * Generate realistic mock dashboard data for one agent via the LLM.
  *
  * The prompt gives the model full context about the agent (name, actions,
@@ -126,7 +238,8 @@ export async function generateAgentDashboardMockData(
   agent: Agent,
   workflowContext: string,
   stepIndex: number,
-  totalSteps: number
+  totalSteps: number,
+  sharedPool?: SharedEntityPool,
 ): Promise<AIMockData> {
   const { url, apiKey } = getAzureConfig();
 
@@ -145,6 +258,8 @@ Outputs      : ${agent.outputs.map(o => `${o.name} (${o.type})`).join(', ') || '
 
 ===  FULL WORKFLOW CONTEXT  ===
 ${workflowContext}
+
+${sharedPool ? formatEntityPoolForPrompt(sharedPool) : ''}
 
 ===  INSTRUCTIONS  ===
 Generate a JSON object representing what an operator would see on this agent's
@@ -206,6 +321,7 @@ Return ONLY raw JSON. No explanation, no markdown fences.`;
     ],
     max_completion_tokens: 4000,
     temperature: 0.6,
+    response_format: { type: 'json_object' as const },
   };
 
   // Retry once on failure (transient network / malformed JSON)

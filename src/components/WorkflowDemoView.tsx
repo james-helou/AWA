@@ -1,13 +1,16 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Workflow, Agent } from '../types/workflow';
-import { generateAgentDashboardMockData } from '../services/mockDataGenerator';
+import { generateAgentDashboardMockData, generateSharedEntityPool, SharedEntityPool } from '../services/mockDataGenerator';
 import { EYLogo } from './EYLogo';
 
 
 interface WorkflowDemoViewProps {
   workflow: Workflow;
   originalTasks: string;
+  // Callback when user clicks "Request Changes" with their feedback
   onBack: () => void;
+  /** Navigate to the technical agent graph page (feature-flagged) */
+  onTechGraph?: () => void;
 }
 
 // ─── Icon Components ────────────────────────────────────────────────────────
@@ -194,7 +197,6 @@ function generateRealisticMockData(
   const agentWords = agent.name.replace(/agent/gi, '').trim().split(/\s+/);
   const idPrefix = agentWords[0]?.substring(0, 3).toUpperCase() || 'ITM';
   const idLabel = agentWords.length > 0 ? `${agentWords[0]} ID` : 'Item ID';
-
   const columns: { key: string; label: string }[] = [
     { key: 'item_id', label: idLabel },
   ];
@@ -436,14 +438,15 @@ async function generateAgentMockDataAsync(
   stepIndex: number,
   totalSteps: number,
   previousAgent?: Agent,
-  previousAgentData?: AgentMockData
+  previousAgentData?: AgentMockData,
+  sharedPool?: SharedEntityPool,
 ): Promise<AgentMockData> {
   // ── Try LLM-based generation first ──
   try {
     console.log(`🤖 Calling LLM for step ${stepIndex + 1}/${totalSteps}: ${agent.name}`);
 
     const aiData = await generateAgentDashboardMockData(
-      agent, workflowContext, stepIndex, totalSteps
+      agent, workflowContext, stepIndex, totalSteps, sharedPool,
     );
 
     const result: AgentMockData = {
@@ -1189,7 +1192,7 @@ function AgentDashboard({
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 
-export function WorkflowDemoView({ workflow, originalTasks, onBack }: WorkflowDemoViewProps) {
+export function WorkflowDemoView({ workflow, originalTasks, onBack, onTechGraph }: WorkflowDemoViewProps) {
   const [activeAgentIndex, setActiveAgentIndex] = useState(0);
   const [agentDataCache, setAgentDataCache] = useState<Map<string, AgentMockData>>(new Map());
   const activeAgent = workflow.agents[activeAgentIndex];
@@ -1218,23 +1221,30 @@ ${originalTasks}`;
 
     let cancelled = false;
 
-    // Fire one LLM call per agent, all in parallel
-    const promises = workflow.agents.map((agent, idx) =>
-      generateAgentMockDataAsync(agent, richContext, idx, workflow.agents.length)
-        .then(data => {
-          if (!cancelled) {
-            console.log(`💾 Pre-fetched data for step ${idx + 1}: ${agent.name}`);
-            setAgentDataCache(prev => new Map(prev).set(agent.id, data));
-          }
-        })
-        .catch(err => {
-          console.error(`❌ Pre-fetch failed for step ${idx + 1} (${agent.name}):`, err);
-        })
-    );
+    // 1. Generate a shared entity pool (one LLM call) so all agents reference the same names/IDs
+    // 2. Then fire one LLM call per agent, all in parallel
+    (async () => {
+      console.log('🎯 Generating shared entity pool for cross-agent consistency...');
+      const sharedPool = await generateSharedEntityPool(richContext);
+      if (cancelled) return;
+      console.log('✅ Shared entity pool ready:', sharedPool.clientNames.slice(0, 3).join(', '), '...');
 
-    Promise.allSettled(promises).then(() => {
+      const promises = workflow.agents.map((agent, idx) =>
+        generateAgentMockDataAsync(agent, richContext, idx, workflow.agents.length, undefined, undefined, sharedPool)
+          .then(data => {
+            if (!cancelled) {
+              console.log(`💾 Pre-fetched data for step ${idx + 1}: ${agent.name}`);
+              setAgentDataCache(prev => new Map(prev).set(agent.id, data));
+            }
+          })
+          .catch(err => {
+            console.error(`❌ Pre-fetch failed for step ${idx + 1} (${agent.name}):`, err);
+          })
+      );
+
+      await Promise.allSettled(promises);
       if (!cancelled) console.log('✅ All agent data pre-fetched');
-    });
+    })();
 
     return () => { cancelled = true; };
   }, [workflow.id, originalTasks]);
@@ -1262,6 +1272,15 @@ ${originalTasks}`;
               </div>
             </div>
             <div className="flex items-center space-x-3">
+              {onTechGraph && (
+                <button
+                  onClick={onTechGraph}
+                  className="px-3 py-1.5 text-xs font-bold bg-[#2E2E38] text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  Technical Graph
+                </button>
+              )}
               <span className="px-3 py-1.5 text-xs font-bold bg-ey-yellow text-ey-dark rounded-full border border-ey-yellow-hover">
                 PREVIEW MODE
               </span>
