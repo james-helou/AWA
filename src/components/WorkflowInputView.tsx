@@ -31,25 +31,28 @@ function GeneratingOverlay() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Step through the phases every ~1.5s (faster model = faster steps)
+    // Step through the phases — adaptive timing so steps span the full wait.
+    // Cycles through steps every 5s to stay visually active on slow connections.
     const stepInterval = setInterval(() => {
-      setActiveStep(prev => (prev < LOADING_STEPS.length - 1 ? prev + 1 : prev));
-    }, 1500);
+      setActiveStep(prev => (prev + 1) % LOADING_STEPS.length);
+    }, 5000);
     return () => clearInterval(stepInterval);
   }, []);
 
   useEffect(() => {
-    // Smooth progress bar — reaches ~90% in ~4-5s, then crawls.
-    // Uses an ease-out curve: fast early, gradually slowing.
+    // Adaptive progress curve that works for both fast (~5s) and slow (~45s) calls.
+    // Moves steadily but decelerates — never quite reaches 97%.
+    // Formula: each tick advances by a fraction of remaining distance that
+    // decreases as progress increases, keeping the bar always moving.
+    const startTime = Date.now();
     const tick = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 95) return prev;
-        const remaining = 95 - prev;
-        // Aggressive early ramp: 8% of remaining each tick (50ms intervals)
-        // At 0%: +7.6/tick → hits 50% in ~0.5s, 80% in ~1.5s, 90% in ~3s
-        return prev + Math.max(0.1, remaining * 0.08);
+      setProgress(() => {
+        const elapsed = (Date.now() - startTime) / 1000; // seconds
+        // Logarithmic curve: fast start, long tail. Reaches ~60% at 5s, ~80% at 15s, ~90% at 30s, ~93% at 45s
+        const p = Math.min(96, 30 * Math.log2(1 + elapsed * 0.5));
+        return p;
       });
-    }, 50);
+    }, 100);
     return () => clearInterval(tick);
   }, []);
 

@@ -249,7 +249,7 @@ async function callAzureOpenAIForGraph(
     },
     body: JSON.stringify({
       messages,
-      max_completion_tokens: 16000,
+      max_completion_tokens: 4096,
       response_format: { type: 'json_object' },
     }),
   });
