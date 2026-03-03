@@ -1278,7 +1278,7 @@ ${originalTasks}`;
                   className="px-3 py-1.5 text-xs font-bold bg-[#2E2E38] text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-1.5"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                  Technical Graph
+                  Technical View
                 </button>
               )}
               <span className="px-3 py-1.5 text-xs font-bold bg-ey-yellow text-ey-dark rounded-full border border-ey-yellow-hover">
