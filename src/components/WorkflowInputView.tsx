@@ -48,8 +48,8 @@ function GeneratingOverlay() {
     const tick = setInterval(() => {
       setProgress(() => {
         const elapsed = (Date.now() - startTime) / 1000; // seconds
-        // Logarithmic curve: fast start, long tail. Reaches ~60% at 5s, ~80% at 15s, ~90% at 30s, ~93% at 45s
-        const p = Math.min(96, 30 * Math.log2(1 + elapsed * 0.5));
+        // Logarithmic curve: fast start, long tail. Reaches ~75% at 5s, ~90% at 15s, ~95% at 30s
+        const p = Math.min(97, 38 * Math.log2(1 + elapsed * 0.7));
         return p;
       });
     }, 100);
